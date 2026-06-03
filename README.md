@@ -167,30 +167,30 @@ the change.
 ```mermaid
 flowchart TB
     subgraph Client
-        U[Analyst / API consumer]
+        U["Analyst / API consumer"]
     end
 
     subgraph API["FastAPI backend"]
-        H[/health/]
-        S[/search/vector\n/accounts|opportunities/{id}/context/]
-        A[/agent/review-opportunity\n/agent/tasks/{id}/approve|reject/]
+        H["GET /health"]
+        S["POST /search/vector<br/>GET /accounts and /opportunities/{id}/context"]
+        A["POST /agent/review-opportunity<br/>POST /agent/tasks/{id}/approve and /reject"]
     end
 
     subgraph Agent["LangGraph agent"]
-        G[StateGraph: 10 nodes\n+ conditional routing]
-        T[Tools: crm_read, vector_search,\nrisk_scoring, missing_field_checker,\ncrm_writeback, audit_log]
+        G["StateGraph: 10 nodes<br/>+ conditional routing"]
+        T["Tools: crm_read, vector_search,<br/>risk_scoring, missing_field_checker,<br/>crm_writeback, audit_log"]
     end
 
     subgraph Services
-        CRM[CRMService]
-        VEC[VectorSearchService]
-        EMB[EmbeddingProvider\nlocal | openai]
+        CRM["CRMService"]
+        VEC["VectorSearchService"]
+        EMB["EmbeddingProvider<br/>local or openai"]
     end
 
     subgraph DB["PostgreSQL + pgvector"]
-        STRUCT[(CRM tables)]
-        VECT[(vector_documents)]
-        RUNTIME[(agent_tasks /\nagent_audit_logs /\ncrm_writebacks)]
+        STRUCT[("CRM tables")]
+        VECT[("vector_documents")]
+        RUNTIME[("agent_tasks /<br/>agent_audit_logs /<br/>crm_writebacks")]
     end
 
     U --> H & S & A
@@ -215,7 +215,7 @@ flowchart TD
     RN --> DR[draft_crm_update]
     DR --> AP{approval_router}
 
-    AP -- "pending\n(high risk OR important field)" --> WAIT([END: pending_approval])
+    AP -- "pending<br/>(high risk OR important field)" --> WAIT([END: pending_approval])
     AP -- "no changes" --> FR[finalize_report]
     AP -- "auto-approved / approved" --> WB[writeback_crm]
     WB --> FR
@@ -247,17 +247,64 @@ erDiagram
     agent_tasks ||--o{ agent_audit_logs : logs
     agent_tasks ||--o{ crm_writebacks : produces
 
-    accounts { string account_id PK; string account_name; string sector }
-    opportunities { string opportunity_id PK; string account_id FK; string stage; float deal_value; string close_date }
-    contacts { string contact_id PK; string account_id FK }
-    support_tickets { string ticket_id PK; string account_id FK; string priority; text description }
-    client_notes { string note_id PK; text content }
-    risk_notes { string note_id PK; string severity; text content }
-    meeting_notes { string note_id PK; text content }
-    vector_documents { int id PK; string source_type; vector embedding; json metadata }
-    agent_tasks { string task_id PK; string execution_status; string approval_status; json state }
-    agent_audit_logs { int id PK; string task_id FK; string node_name; string status }
-    crm_writebacks { string writeback_id PK; string task_id FK; json changes }
+    accounts {
+        string account_id PK
+        string account_name
+        string sector
+    }
+    opportunities {
+        string opportunity_id PK
+        string account_id FK
+        string stage
+        float deal_value
+        string close_date
+    }
+    contacts {
+        string contact_id PK
+        string account_id FK
+    }
+    support_tickets {
+        string ticket_id PK
+        string account_id FK
+        string priority
+        text description
+    }
+    client_notes {
+        string note_id PK
+        text content
+    }
+    risk_notes {
+        string note_id PK
+        string severity
+        text content
+    }
+    meeting_notes {
+        string note_id PK
+        text content
+    }
+    vector_documents {
+        int id PK
+        string source_type
+        vector embedding
+        json metadata
+    }
+    agent_tasks {
+        string task_id PK
+        string execution_status
+        string approval_status
+        json state
+    }
+    agent_audit_logs {
+        int id PK
+        string task_id FK
+        string node_name
+        string status
+    }
+    crm_writebacks {
+        string writeback_id PK
+        string task_id FK
+        json changes
+    }
 ```
 
 ---
