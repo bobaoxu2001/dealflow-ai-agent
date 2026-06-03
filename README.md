@@ -1,0 +1,471 @@
+# DealFlow AI Agent
+
+> **A LangGraph-powered enterprise CRM workflow agent for opportunity review, risk analysis, customer-context retrieval, and human-approved CRM writeback.**
+
+DealFlow AI Agent is a production-style **AI agent system** — not a chatbot, not a
+dashboard, not a toy RAG demo. It models a real enterprise workflow: a sales/CS
+analyst hands the agent a sales opportunity, and the agent reviews structured CRM
+data, retrieves unstructured customer-support history via vector search, scores
+deal risk, detects missing CRM fields, recommends next steps, drafts a CRM
+update, and — when the change is high-risk — **pauses for human approval before
+writing back**. Every step is persisted and audited.
+
+---
+
+## Why this project matters
+
+Enterprise teams make opportunity decisions across **fragmented data**: CRM
+records, account data, meeting notes, support tickets, and internal documents.
+The hard part of "AI for the enterprise" isn't generating text — it's
+**orchestrating a reliable, stateful, multi-step workflow** that combines
+structured and unstructured data, routes between tools, knows when to stop for a
+human, and leaves an audit trail you can trust.
+
+This project demonstrates exactly that.
+
+## Target role alignment (Senior AI / AI Agent Engineer)
+
+| Requirement | Where it's demonstrated |
+|---|---|
+| AI agent systems with LangGraph / LangChain | [`app/agents/graph.py`](app/agents/graph.py), [`nodes.py`](app/agents/nodes.py) |
+| Complex multi-step enterprise workflows | 10-node review graph with conditional routing |
+| Tool routing strategies | [`app/agents/routers.py`](app/agents/routers.py), [`app/tools/`](app/tools) |
+| Long-running / stateful execution | Durable `agent_tasks.state` snapshots, restart-safe resume |
+| Human-in-the-loop approval | `approval_router` → pause → `approve`/`reject` → resume |
+| Structured + unstructured data | PostgreSQL CRM tables + pgvector document store |
+| PostgreSQL + vector search / pgvector | [`app/db/`](app/db), [`vector_search_service.py`](app/services/vector_search_service.py) |
+| External data ingestion | Two real Kaggle datasets + scripted pipeline |
+| FastAPI backend | [`app/main.py`](app/main.py), [`app/api/`](app/api) |
+| Dockerized local dev | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) |
+| GitHub Actions CI | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| Testing, docs, README | [`tests/`](tests) + this document |
+
+---
+
+## Data sources
+
+This project uses **two public Kaggle datasets to simulate an enterprise CRM
+environment. A small synthetic workflow layer is generated to connect CRM
+opportunities with customer support history and agent approval/writeback
+records.**
+
+| # | Dataset | Kaggle slug | Role |
+|---|---|---|---|
+| 1 | CRM Sales Opportunities | `nilkamalsaha/crm-sales-opportunities-on-google-sheets` | Structured CRM foundation: accounts, opportunities, products, sales teams |
+| 2 | Customer Support Tickets | `suraj520/customer-support-ticket-dataset` | Unstructured customer history: support tickets → client/risk notes → embeddings |
+
+### Real data vs. synthetic workflow layer
+
+The two datasets **do not share a join key** (the CRM dataset keys accounts by
+*name*; the support dataset has no account id at all). The transform pipeline
+therefore makes a few **documented, deterministic** mapping decisions and adds a
+clearly-labeled synthetic layer. Nothing in the underlying CRM/support *rows* is
+fabricated — only the workflow scaffolding that a real enterprise system would
+have but a static export does not.
+
+| Item | Source | Notes |
+|---|---|---|
+| `account_id` (e.g. `ACC-0001`) | derived | Stable surrogate minted from sorted unique account names |
+| support ticket → account / opportunity link | derived | Deterministic hash of `ticket_id` (seeded) maps each ticket to an account, then to one of that account's opportunities |
+| `client_notes`, `risk_notes` | derived from real ticket text | Risk notes come from low-satisfaction / high-priority tickets |
+| `meeting_notes` | synthetic (`is_synthetic=true`) | Grounded in real account names |
+| missing CRM fields, agent tasks, approval states, writeback seeds | synthetic (`is_synthetic=true`) | Deterministic seed (`SEED=42`) |
+
+> **Run it without Kaggle:** `make seed-demo` loads a small, clearly-synthetic
+> demo dataset so the entire stack (API, vector search, agent, approval flow,
+> tests) runs fully offline with **no Kaggle credentials and no API keys**.
+
+---
+
+## Real data verification
+
+The numbers below come from an actual end-to-end run of the pipeline against the
+**two live Kaggle datasets** (downloaded via `kagglehub`, transformed, loaded,
+embedded, and queried). The demo seed (`make seed-demo` / `OPP-DEMO*`) was
+**not** used for this verification — this is the real Kaggle data flowing all the
+way through the LangGraph agent.
+
+**Datasets used**
+
+- `nilkamalsaha/crm-sales-opportunities-on-google-sheets`
+- `suraj520/customer-support-ticket-dataset`
+
+**Raw row counts** (`scripts/inspect_datasets.py`, from `data/raw/`)
+
+| Raw file | Rows |
+|---|---|
+| `accounts.csv` | 85 |
+| `sales_pipeline.csv` (opportunities) | 8,800 |
+| `products.csv` | 7 |
+| `sales_teams.csv` | 35 |
+| `customer_support_tickets.csv` | 8,469 |
+
+**Loaded row counts** (after transform + synthetic linking, in the database)
+
+| Table | Rows | Origin |
+|---|---|---|
+| `accounts` | 85 | Kaggle CRM |
+| `opportunities` | 8,800 | Kaggle CRM |
+| `support_tickets` | 8,469 | Kaggle support |
+| `client_notes` | 8,469 | derived from real ticket text |
+| `risk_notes` | 4,729 | derived from real ticket text |
+| `vector_documents` | 24,521 | embedded support/client/risk/meeting text |
+
+**Example: a real opportunity through the full agent + approval flow**
+
+A real opportunity from `sales_pipeline.csv` (`is_synthetic=false`) was run
+through `POST /agent/review-opportunity` and then approved:
+
+| Field | Value |
+|---|---|
+| Opportunity ID | `OM8LELJW` |
+| Account | `ACC-0039` / *Iselectrics* |
+| Original stage | `Engaging` |
+| Risk score | `0.9` |
+| Agent status after review | `pending_approval` (high risk → routed to human) |
+| Approved writeback | `stage`: `Engaging` → `On Hold` (persisted to `crm_writebacks`) |
+
+The agent retrieved structured CRM context, pulled the account's support history
+via vector search, scored risk from real ticket signals (open/high-priority
+tickets, refund/cancel mentions), drafted a CRM update, and — because the change
+touched an important field on a high-risk deal — **paused for human approval**
+rather than writing back automatically. After approval it resumed and applied
+the change.
+
+> **Why a synthetic linking layer:** the two public datasets do **not** share
+> native IDs (the CRM dataset keys accounts by name; the support dataset has no
+> account identifier at all). Support tickets are therefore connected to CRM
+> accounts and opportunities through a **deterministic, seeded** mapping (a hash
+> of `ticket_id`), so the link is reproducible and clearly documented rather than
+> random. The underlying CRM and support *rows* remain the real Kaggle data —
+> only the join and workflow scaffolding are synthetic.
+
+---
+
+## System architecture
+
+```mermaid
+flowchart TB
+    subgraph Client
+        U[Analyst / API consumer]
+    end
+
+    subgraph API["FastAPI backend"]
+        H[/health/]
+        S[/search/vector\n/accounts|opportunities/{id}/context/]
+        A[/agent/review-opportunity\n/agent/tasks/{id}/approve|reject/]
+    end
+
+    subgraph Agent["LangGraph agent"]
+        G[StateGraph: 10 nodes\n+ conditional routing]
+        T[Tools: crm_read, vector_search,\nrisk_scoring, missing_field_checker,\ncrm_writeback, audit_log]
+    end
+
+    subgraph Services
+        CRM[CRMService]
+        VEC[VectorSearchService]
+        EMB[EmbeddingProvider\nlocal | openai]
+    end
+
+    subgraph DB["PostgreSQL + pgvector"]
+        STRUCT[(CRM tables)]
+        VECT[(vector_documents)]
+        RUNTIME[(agent_tasks /\nagent_audit_logs /\ncrm_writebacks)]
+    end
+
+    U --> H & S & A
+    A --> G --> T --> CRM & VEC
+    S --> CRM & VEC
+    VEC --> EMB
+    CRM --> STRUCT
+    VEC --> VECT
+    G --> RUNTIME
+```
+
+## LangGraph workflow
+
+```mermaid
+flowchart TD
+    START([start]) --> P[parse_task]
+    P --> RC[retrieve_crm_context]
+    RC --> RV[retrieve_vector_context]
+    RV --> AR[analyze_risks]
+    AR --> MF[detect_missing_fields]
+    MF --> RN[recommend_next_steps]
+    RN --> DR[draft_crm_update]
+    DR --> AP{approval_router}
+
+    AP -- "pending\n(high risk OR important field)" --> WAIT([END: pending_approval])
+    AP -- "no changes" --> FR[finalize_report]
+    AP -- "auto-approved / approved" --> WB[writeback_crm]
+    WB --> FR
+    FR --> DONE([END: completed])
+
+    WAIT -. "human approve" .-> WB
+    WAIT -. "human reject" .-> REJ([END: rejected])
+```
+
+**Routing logic**
+
+- High risk (`risk_score >= HIGH_RISK_THRESHOLD`) **or** a drafted change to an
+  important field (`stage`, `deal_value`, `close_date`) ⇒ route to human approval.
+- If approval is required, the graph **stops** and the task is persisted as
+  `pending_approval` (durable in `agent_tasks.state`, so it survives restarts).
+- `approve` resumes a small resume-graph (`writeback_crm → finalize_report`).
+- `reject` marks the task `rejected` and performs **no** writeback.
+- If no approval is required and there are changes, it writes back automatically;
+  if there are no changes, it skips straight to the final report.
+
+## Database schema (overview)
+
+```mermaid
+erDiagram
+    accounts ||--o{ opportunities : has
+    accounts ||--o{ contacts : has
+    accounts ||--o{ support_tickets : has
+    opportunities ||--o{ support_tickets : referenced_by
+    agent_tasks ||--o{ agent_audit_logs : logs
+    agent_tasks ||--o{ crm_writebacks : produces
+
+    accounts { string account_id PK; string account_name; string sector }
+    opportunities { string opportunity_id PK; string account_id FK; string stage; float deal_value; string close_date }
+    contacts { string contact_id PK; string account_id FK }
+    support_tickets { string ticket_id PK; string account_id FK; string priority; text description }
+    client_notes { string note_id PK; text content }
+    risk_notes { string note_id PK; string severity; text content }
+    meeting_notes { string note_id PK; text content }
+    vector_documents { int id PK; string source_type; vector embedding; json metadata }
+    agent_tasks { string task_id PK; string execution_status; string approval_status; json state }
+    agent_audit_logs { int id PK; string task_id FK; string node_name; string status }
+    crm_writebacks { string writeback_id PK; string task_id FK; json changes }
+```
+
+---
+
+## System design notes
+
+### PostgreSQL + pgvector
+
+- Structured CRM data lives in normalized relational tables.
+- Unstructured text (support ticket descriptions/resolutions, client/risk/meeting
+  notes) is embedded and stored in `vector_documents`.
+- **Portable embedding column** ([`app/db/vector.py`](app/db/vector.py)): on
+  PostgreSQL it uses the native pgvector `Vector` type with cosine-distance
+  operators (`<=>`); on SQLite it transparently falls back to JSON-encoded
+  vectors with Python-side cosine ranking. The *same models and tests* run on
+  both, which is what lets the project be zero-infra locally yet
+  Postgres-native in Docker.
+
+### Embedding provider abstraction
+
+[`app/services/embedding_service.py`](app/services/embedding_service.py) defines
+an `EmbeddingProvider` interface with two implementations:
+
+- **`LocalEmbeddingProvider`** (default) — deterministic hashing embedder. No API
+  key, no network, identical vectors across runs ⇒ stable tests and offline demo.
+- **`OpenAIEmbeddingProvider`** — real embeddings when `OPENAI_API_KEY` is set.
+
+Switching is a one-line config change (`EMBEDDING_PROVIDER`).
+
+### Deterministic, key-free agent nodes
+
+The **orchestration** is the point: LangGraph state, conditional routing, tool
+calls, the human-in-the-loop pause/resume, and the audit trail. Node *internals*
+(risk scoring, draft generation) are explainable deterministic heuristics by
+default, so the workflow is reproducible and runs with no LLM key. Each node can
+be swapped for an LLM-backed implementation without touching the graph.
+
+### State persistence & auditability
+
+- The full `AgentState` is snapshotted to `agent_tasks.state` (JSON) after every
+  run, enabling restart-safe resume after approval.
+- Every node writes a row to `agent_audit_logs` with `task_id`, `node_name`,
+  input/output summaries, status, timestamp, and any error.
+- Approved writebacks are recorded in `crm_writebacks` with old→new field diffs.
+
+---
+
+## API reference & sample curl commands
+
+Base URL (local): `http://localhost:8000`
+
+### Health
+```bash
+curl -s http://localhost:8000/health | jq
+```
+
+### Vector search
+```bash
+curl -s -X POST http://localhost:8000/search/vector \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "customer threatening to churn", "account_id": "ACC-DEMO1", "top_k": 3}' | jq
+```
+
+### Opportunity context (structured + retrieved docs)
+```bash
+curl -s "http://localhost:8000/opportunities/OPP-DEMO1/context" | jq
+```
+
+### Start an opportunity review (runs the agent)
+```bash
+curl -s -X POST http://localhost:8000/agent/review-opportunity \
+  -H 'Content-Type: application/json' \
+  -d '{"opportunity_id": "OPP-DEMO1", "task": "Review this opportunity, identify blockers, summarize client history, and recommend next steps."}' | jq
+```
+
+### Get agent task status
+```bash
+curl -s http://localhost:8000/agent/tasks/<TASK_ID> | jq
+```
+
+### Approve a pending CRM writeback (resumes the workflow)
+```bash
+curl -s -X POST http://localhost:8000/agent/tasks/<TASK_ID>/approve \
+  -H 'Content-Type: application/json' -d '{"approver": "manager"}' | jq
+```
+
+### Reject a pending writeback
+```bash
+curl -s -X POST http://localhost:8000/agent/tasks/<TASK_ID>/reject \
+  -H 'Content-Type: application/json' -d '{"approver": "manager", "reason": "needs more discovery"}' | jq
+```
+
+Interactive API docs are available at `http://localhost:8000/docs`.
+
+---
+
+## Demo walkthrough
+
+1. **High-risk deal → human approval.** Review `OPP-DEMO1` (Northwind). It has
+   critical/open support tickets full of churn/competitor/refund signals and a
+   missing `close_date`. The agent scores it high-risk and drafts a `stage`
+   change ⇒ `approval_status: pending`, `execution_status: pending_approval`.
+   **No writeback happens yet.**
+2. **Approve.** Call `/approve`. The resume-graph runs `writeback_crm →
+   finalize_report`; the `stage` change is applied and recorded in
+   `crm_writebacks` ⇒ `execution_status: completed`.
+3. **Low-risk deal → straight through.** Review `OPP-DEMO2` (Initech): clean
+   data, a single happy/closed ticket. No risky changes are drafted ⇒ completes
+   immediately with `approval_status: not_required`.
+4. **Reject.** Re-run `OPP-DEMO1`, then `/reject` ⇒ `execution_status: rejected`
+   and **no** writeback.
+
+Inspect the audit trail any time via `GET /agent/tasks/{task_id}` (`audit_log`)
+or the `agent_audit_logs` table.
+
+---
+
+## Running locally
+
+### Option A — zero-infra (SQLite, offline)
+```bash
+make install         # pip install -r requirements.txt (in a venv)
+make seed-demo       # create tables + load the offline demo dataset
+make dev             # uvicorn on http://localhost:8000
+```
+
+### Option B — Docker (FastAPI + PostgreSQL + pgvector)
+```bash
+make docker-up       # build & start api + db (pgvector/pgvector:pg16)
+make docker-ingest   # seed the offline demo dataset inside the container
+# ... or run the real Kaggle pipeline (see below) ...
+make docker-down
+```
+
+### Ingesting the real Kaggle datasets
+Requires Kaggle credentials (`~/.kaggle/kaggle.json` or `KAGGLE_USERNAME` /
+`KAGGLE_KEY`).
+```bash
+make download    # download both datasets into data/raw/
+make inspect     # print row counts, columns, missing values, samples
+make transform   # normalize -> data/processed/*.csv
+make synth       # generate the synthetic workflow layer
+make load        # load processed CSVs + build the vector index
+# shortcut:
+make ingest      # download + transform + synth + load
+```
+
+### Testing
+```bash
+make test        # pytest: health, ingestion, vector search, agent happy path,
+                 #         approval-required path, rejection path
+make lint        # ruff
+```
+
+---
+
+## What this demonstrates for AI Engineer roles
+
+- **Agent orchestration over chat:** a real LangGraph `StateGraph` with typed
+  state, conditional routing, tool calls, and a durable human-in-the-loop pause.
+- **Structured + unstructured fusion:** relational CRM joined with pgvector
+  semantic retrieval in a single workflow.
+- **Production hygiene:** config/logging/error handling, a provider abstraction
+  with offline fallback, audit logging, Docker, CI, and tests for the tricky
+  paths (approval and rejection), not just the happy path.
+- **Honest scoping:** clearly-labeled synthetic workflow layer, documented data
+  mappings, deterministic behavior, no overclaimed "production deployment."
+
+## Future improvements
+
+- Swap deterministic node logic for LLM-backed nodes (LangChain) with the
+  existing tool surface; add structured-output validation.
+- Use a persistent LangGraph checkpointer (Postgres) for native interrupt/resume.
+- Add streaming progress (SSE) for long-running reviews.
+- Hybrid retrieval (BM25 + vector) and reranking.
+- Role-based auth on approval endpoints + per-approver audit identity.
+- Optional Streamlit review console on top of the existing API.
+
+---
+
+## Resume bullets
+
+**DealFlow AI Agent — LangGraph Enterprise CRM Workflow Automation**
+
+- Built a production-style AI agent system that automates long-running CRM
+  opportunity-review workflows across structured sales data and customer-support
+  history from two public Kaggle datasets.
+- Designed LangGraph orchestration with stateful execution, dynamic tool routing,
+  human-in-the-loop approval, and CRM writeback safeguards.
+- Implemented a PostgreSQL + pgvector retrieval layer combining structured CRM
+  records with embedded support tickets, meeting notes, and risk notes, behind a
+  pluggable embedding provider with a deterministic offline fallback.
+- Containerized the FastAPI application with Docker/Compose and added GitHub
+  Actions CI for linting and tests.
+- Created node-level audit logs and persisted execution state to improve
+  transparency, debuggability, and restart-safe resumability.
+
+---
+
+## Portfolio case study
+
+- **Problem:** Enterprise teams manage opportunity decisions across fragmented
+  CRM records, notes, tickets, and documents.
+- **Approach:** A stateful LangGraph agent that combines CRM data, vector
+  retrieval, risk scoring, tool routing, and approval-based CRM writeback.
+- **Technical implementation:** FastAPI, LangGraph, PostgreSQL, pgvector, Docker,
+  GitHub Actions CI, and node-level audit logs.
+- **Result:** A production-style AI agent workflow that demonstrates enterprise AI
+  orchestration — not just chatbot response generation.
+- **Role relevance:** AI agent engineering, workflow orchestration,
+  structured/unstructured data integration, long-running task management, and
+  maintainable backend architecture.
+
+## Project structure
+
+```
+dealflow-ai-agent/
+  app/
+    api/routes/        # health, search, agent endpoints
+    agents/            # graph.py, state.py, nodes.py, routers.py
+    tools/             # crm/vector/risk/approval/audit tools
+    db/                # models, session, init_db, portable vector column
+    services/          # crm, vector search, embeddings, tasks, approval
+    schemas/           # pydantic request/response models
+    utils/             # config, logging
+    main.py            # FastAPI app
+  scripts/             # download / inspect / transform / synth / load / seed_demo
+  tests/               # health, ingestion, vector, agent, approval
+  .github/workflows/   # ci.yml
+  docker-compose.yml  Dockerfile  Makefile  requirements.txt  .env.example
+```

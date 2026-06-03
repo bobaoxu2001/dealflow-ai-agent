@@ -1,0 +1,31 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+**/kaggle.json
+
+# --- Local databases ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Data (never commit raw/processed datasets) ---
+data/raw/**
+data/processed/**
+!data/raw/
+!data/raw/crm/
+!data/raw/support/
+!data/processed/
+!**/.gitkeep
+
+# --- Caches ---
+.pytest_cache/
+.ruff_cache/
+.DS_Store
