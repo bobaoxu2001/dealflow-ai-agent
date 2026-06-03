@@ -1,5 +1,12 @@
 # DealFlow AI Agent
 
+[![CI](https://github.com/bobaoxu2001/dealflow-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/bobaoxu2001/dealflow-ai-agent/actions/workflows/ci.yml)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-1C3C3C)](https://langchain-ai.github.io/langgraph/)
+[![Docker](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > **A LangGraph-powered enterprise CRM workflow agent for opportunity review, risk analysis, customer-context retrieval, and human-approved CRM writeback.**
 
 DealFlow AI Agent is a production-style **AI agent system** — not a chatbot, not a
@@ -9,6 +16,19 @@ data, retrieves unstructured customer-support history via vector search, scores
 deal risk, detects missing CRM fields, recommends next steps, drafts a CRM
 update, and — when the change is high-risk — **pauses for human approval before
 writing back**. Every step is persisted and audited.
+
+---
+
+## Quick proof
+
+- ✅ **CI passing** on GitHub Actions (install → import check → tests → lint, from a clean runner)
+- ✅ **17/17 tests passing** (`pytest`)
+- ✅ **Real Kaggle data verified** end-to-end — not just the offline demo seed
+- 📊 **8,800** CRM opportunities · **8,469** support tickets · **24,521** vector documents loaded and searchable
+- 🤖 Real opportunity **`OM8LELJW`** (account `ACC-0039` / *Iselectrics*) run through the full agent: reviewed at **risk 0.9 → `pending_approval` → approved writeback** (`stage`: `Engaging` → `On Hold`), persisted with audit logs
+
+> Full numbers and provenance are in [Real data verification](#real-data-verification).
+> Note: this is a portfolio project — it runs locally and in CI, and is **not** deployed to production.
 
 ---
 
@@ -468,4 +488,32 @@ dealflow-ai-agent/
   tests/               # health, ingestion, vector, agent, approval
   .github/workflows/   # ci.yml
   docker-compose.yml  Dockerfile  Makefile  requirements.txt  .env.example
+  docs/                # interview_walkthrough.md, portfolio_summary.md
+  LICENSE              # MIT
+```
+
+---
+
+## Further docs
+
+- [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md) — 30-second pitch, 2-minute technical walkthrough, and 10 likely interview Q&As.
+- [`docs/portfolio_summary.md`](docs/portfolio_summary.md) — resume bullets, LinkedIn post, and role positioning.
+
+---
+
+## Repository metadata suggestion
+
+Suggested GitHub **About** settings for this repo (Settings → General / the
+sidebar gear on the repo home):
+
+**Description**
+
+```
+LangGraph-powered enterprise CRM workflow agent with FastAPI, PostgreSQL/pgvector, human approval, audit logs, Docker, and CI.
+```
+
+**Topics**
+
+```
+langgraph, langchain, fastapi, ai-agents, llm, rag, pgvector, postgresql, crm, workflow-automation, human-in-the-loop, docker, github-actions
 ```
