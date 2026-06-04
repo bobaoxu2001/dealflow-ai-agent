@@ -21,12 +21,12 @@ writing back**. Every step is persisted and audited.
 
 ## Quick proof
 
-- ✅ **Dual CI passing** on GitHub Actions: a full **offline SQLite** suite *and* a **PostgreSQL + pgvector** integration job
-- ✅ **Tests passing** (`pytest`) — full offline suite + native pgvector integration tests
-- ✅ **Real Kaggle data verified** end-to-end — not just the offline demo seed
-- 📊 **8,800** CRM opportunities · **8,469** support tickets · **24,521** vector documents loaded and searchable
-- 🤖 Real opportunity **`OM8LELJW`** (account `ACC-0039` / *Iselectrics*) run through the full agent: reviewed at **risk 0.9 → `pending_approval` → approved writeback** (`stage`: `Engaging` → `On Hold`), persisted with audit logs
-- 🔌 Optional real **HubSpot CRM adapter** with dry-run writeback, strict field allowlist, and mocked API tests
+- **Dual CI passing** on GitHub Actions: a full **offline SQLite** suite *and* a **PostgreSQL + pgvector** integration job
+- **Tests passing** (`pytest`) — full offline suite + native pgvector integration tests
+- **Real Kaggle data verified** end-to-end — not just the offline demo seed
+- **8,800** CRM opportunities, **8,469** support tickets, **24,521** vector documents loaded and searchable
+- Real opportunity **`OM8LELJW`** (account `ACC-0039` / *Iselectrics*) run through the full agent: reviewed at **risk 0.9 → `pending_approval` → approved writeback** (`stage`: `Engaging` → `On Hold`), persisted with audit logs
+- Optional real **HubSpot CRM adapter** with dry-run writeback, strict field allowlist, and mocked API tests
 
 > Full numbers and provenance are in [Real data verification](#real-data-verification).
 > Note: this is a portfolio project — it runs locally and in CI, and is **not** deployed to production.
