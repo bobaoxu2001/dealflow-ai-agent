@@ -1,25 +1,24 @@
 # DealFlow AI Agent — Technical Walkthrough
 
-A deeper walkthrough of the architecture, workflow, and design decisions, with a
-short speaking guide for demoing the project. Honest framing: this runs locally
-and in CI; it is not deployed to production.
+A deeper walkthrough of the architecture, workflow, and design decisions. Honest
+framing: this runs locally and in CI; it is not deployed to production.
 
 ---
 
-## 30-second pitch
+## Overview
 
-> DealFlow AI Agent is a LangGraph-powered enterprise CRM workflow agent. You
-> hand it a sales opportunity, and it reviews the structured CRM record,
-> retrieves the customer's unstructured support history through vector search,
-> scores deal risk, detects missing CRM fields, recommends next steps, and
-> drafts a CRM update. When the change is high-risk it **pauses for human
-> approval before writing back** — and every node is persisted and audited. It
-> demonstrates stateful multi-step agent orchestration, tool routing, and
-> human-in-the-loop control, not just a chatbot response.
+DealFlow AI Agent is a LangGraph-powered enterprise CRM workflow agent. Given a
+sales opportunity, it reviews the structured CRM record, retrieves the customer's
+unstructured support history through vector search, scores deal risk, detects
+missing CRM fields, recommends next steps, and drafts a CRM update. When the
+change is high-risk it **pauses for human approval before writing back** — and
+every node is persisted and audited. It is stateful multi-step agent
+orchestration with tool routing and human-in-the-loop control, not a single
+chatbot response.
 
 ---
 
-## 2-minute technical walkthrough
+## Execution flow
 
 1. **Input.** `POST /agent/review-opportunity` with an `opportunity_id` and a
    natural-language task. A `task_id` is created and persisted immediately.
@@ -146,159 +145,152 @@ support dataset has no account id). So:
 
 ---
 
-## 10 likely interviewer questions & answers
+## Design decisions and trade-offs
 
-**1. Why LangGraph instead of a plain function chain or a ReAct agent?**
+**LangGraph vs. a plain function chain**
 The workflow is a stateful graph with conditional branching and a human pause
-point. LangGraph gives first-class state, explicit nodes/edges, and clean
-conditional routing, which makes the control flow auditable and testable —
-better than an opaque ReAct loop for an enterprise approval workflow.
+point. LangGraph provides first-class state, explicit nodes/edges, and clean
+conditional routing, which keeps the control flow auditable and testable —
+preferable to an opaque ReAct loop for an enterprise approval workflow.
 
-**2. The nodes are mostly deterministic — is this really "AI"?**
-The orchestration, retrieval, and routing are the engineering substance, and
-they're real. Node internals use deterministic heuristics by default so the
-project runs without API keys and tests are reproducible, but each node has an
-LLM hook. I deliberately didn't fake an LLM dependency to look impressive — the
-architecture is what transfers to a real LLM-backed deployment.
+**Deterministic nodes with an optional LLM**
+The orchestration, retrieval, and routing are the engineering substance and are
+fully real. Node internals use deterministic heuristics by default so the project
+runs without API keys and tests are reproducible, while each node has an LLM hook.
+The architecture is what transfers to a real LLM-backed deployment; no LLM
+dependency is faked.
 
-**3. How does human-in-the-loop resume survive an API restart?**
-I persist the full agent state snapshot to `agent_tasks`, not just an in-memory
-checkpointer. Approve/reject rebuilds state from the DB and runs the remaining
-nodes, so a pending task survives a process restart. A LangGraph Postgres
-checkpointer is a natural future swap.
+**Restart-safe human-in-the-loop resume**
+The full agent state snapshot is persisted to `agent_tasks`, not just an
+in-memory checkpointer. Approve/reject rebuilds state from the DB and runs the
+remaining nodes, so a pending task survives a process restart. A LangGraph
+Postgres checkpointer is a natural future swap.
 
-**4. How does vector search work, and why pgvector?**
-Unstructured text (ticket descriptions/resolutions, client/risk/meeting notes)
-is embedded into `vector_documents`. On Postgres I use pgvector's cosine-distance
-operator; on SQLite I fall back to Python cosine over the same JSON-stored
-vectors. Keeping vectors next to the CRM data avoids a second datastore and lets
-me filter by account/opportunity in the same query.
+**Vector search and why pgvector**
+Unstructured text (ticket descriptions/resolutions, client/risk/meeting notes) is
+embedded into `vector_documents`. On Postgres the pgvector cosine-distance
+operator is used; on SQLite the same JSON-stored vectors are ranked with Python
+cosine. Keeping vectors next to the CRM data avoids a second datastore and allows
+filtering by account/opportunity in the same query.
 
-**5. The embeddings are a hash-based local provider — limitation?**
-Yes — the default `LocalEmbeddingProvider` is a deterministic hashing embedder so
-the demo needs no API key. It's behind an `EmbeddingProvider` interface, so
-switching to OpenAI (or any model) is a one-line config change. I'd use a real
-model in production; the abstraction is the point.
+**Local hashing embedder (a deliberate limitation)**
+The default `LocalEmbeddingProvider` is a deterministic hashing embedder so the
+demo needs no API key. It sits behind an `EmbeddingProvider` interface, so
+switching to a hosted model is a one-line config change; a real model would be
+used in production. The abstraction is the point.
 
-**6. How do you decide what needs approval?**
-An explicit rule in `approval_router`: risk ≥ configurable threshold, or the
-draft modifies a configured important field (`stage`, `deal_value`,
-`close_date`). It's transparent and configurable rather than an LLM "vibe", which
-matters for trust and audit.
+**Explicit approval policy**
+Approval is an explicit rule in `approval_router`: risk ≥ a configurable
+threshold, or the draft modifies a configured important field (`stage`,
+`deal_value`, `close_date`). The policy is transparent and configurable rather
+than model-driven, which matters for trust and audit.
 
-**7. The two datasets don't join — how did you handle that honestly?**
-They share no key, so I built a deterministic, seeded linking layer and
-documented it. Real rows stay real; only the join and workflow scaffolding are
-synthetic and flagged `is_synthetic`. I call this out in the README rather than
-pretending the data natively connects.
+**Datasets without a shared key**
+The two datasets share no key, so the project uses a deterministic, seeded linking
+layer that is documented openly. Real rows stay real; only the join and workflow
+scaffolding are synthetic and flagged `is_synthetic`, rather than pretending the
+data natively connects.
 
-**8. How is it tested, and what do the tests cover?**
+**Testing strategy**
 `pytest` covers health, data transformation, model creation, vector insertion +
 retrieval, the agent happy path, the approval-required path, the rejection path,
 LLM synthesis fallback, the trace endpoint, idempotent error handling, and the
-evaluation helpers — 37 tests total. The full offline suite runs on SQLite with
-the local embedder (no services/keys); a separate set of 5 pgvector integration
-tests runs against PostgreSQL in CI.
+evaluation helpers. The full offline suite runs on SQLite with the local embedder
+(no services/keys); a separate set of pgvector integration tests runs against
+PostgreSQL in CI.
 
-**9. How would you scale or productionize this?**
+**Scaling considerations**
 Move embeddings to a hosted model, switch to the Postgres checkpointer, add
 pgvector indexes (IVFFlat/HNSW) for large corpora, put nodes behind a task queue
 for true long-running execution, add authn/z and rate limiting, and add tracing
-(LangSmith/OpenTelemetry). I intentionally don't claim any of this is deployed.
+(LangSmith/OpenTelemetry). None of this is claimed to be deployed.
 
-**10. What was the hardest part / what would you change?**
-Making one codebase run both on zero-infra SQLite (for CI/tests) and on
-Postgres+pgvector (for the real path) without forking logic — solved with a
-portable vector column and a backend-aware search service. If I rebuilt it, I'd
-start with the LangGraph Postgres checkpointer to make resume even more native.
+**Hardest part / what to change**
+Running one codebase on both zero-infra SQLite (for CI/tests) and Postgres+pgvector
+(for the real path) without forking logic — solved with a portable vector column
+and a backend-aware search service. A rebuild would start from the LangGraph
+Postgres checkpointer to make resume even more native.
 
 ---
 
-## What changed in v2
+## Recent improvements
 
 A production-readiness pass on top of the working prototype:
 
 - **Optional LLM final-synthesis layer** behind a provider abstraction
-  (`app/services/llm_service.py`). Deterministic local summary by default; OpenAI
-  if a key is set. The LLM only narrates the already-computed report.
+  (`app/services/llm_service.py`). Deterministic local summary by default; a
+  hosted model if a key is set. The LLM only narrates the already-computed report.
 - **PostgreSQL + pgvector CI job** (`pgvector/pgvector:pg16` service container)
   that verifies the native `<=>` operator — separate from the SQLite full-suite job.
 - **Evaluation harness** (`scripts/evaluate_agent.py`, `docs/evaluation.md`):
   deterministic checks on retrieval, risk scoring, approval routing, and pipeline integrity.
 - **`GET /agent/tasks/{id}/trace`** observability endpoint (ordered node trace).
 - **Hardened error handling / idempotency** for approve/reject, with tests.
-- **Demo assets** (`docs/demo/`) and `docs/productionization.md` + `docs/project_review.md`.
-
-## How to explain the optional LLM synthesis
-
-"The agent's decisions are deterministic and auditable — risk scoring, approval
-routing, and writeback are rules, not model output. The LLM sits at the very end
-and only turns the structured report into a readable executive summary. It is
-architecturally prevented from triggering a writeback or skipping approval. That
-gives me LLM polish without sacrificing testability or safety — and because it's
-behind a provider interface with a deterministic fallback, the whole suite runs
-with no API key."
-
-## How to explain Postgres CI vs SQLite CI
-
-"Two CI jobs. The SQLite job runs the full offline suite fast, with zero
-infrastructure — that's where logic, agent, and approval tests live. The Postgres
-job spins up a `pgvector/pgvector:pg16` container and runs integration tests that
-exercise the real pgvector path (extension enabled, native cosine-distance
-search, agent state persisted in Postgres). One codebase, two backends, proven by
-CI rather than claimed."
-
-## "Is this production-ready?"
-
-"No — and I'm explicit about that everywhere. It runs locally and in CI; it's not
-deployed. What *is* production-style: durable restart-safe state, node-level audit
-logs and a trace endpoint, idempotent approval handling, a hard guardrail that the
-LLM can't write to the CRM, and a native pgvector path tested in CI. What's
-missing for production is in `docs/productionization.md`: an async worker, the
-LangGraph Postgres checkpointer, real embedding/LLM providers, OpenTelemetry/
-LangSmith tracing, and auth/multi-tenancy."
-
-## "What would you do next?"
-
-"In order: move execution to an async worker and adopt the LangGraph Postgres
-checkpointer for native interrupt/resume; swap in a real embedding model + a
-pgvector ANN index; add OpenTelemetry/LangSmith tracing keyed by task_id; then
-auth, multi-tenancy, and a labeled evaluation set to measure decision accuracy
-rather than just behavior."
-
----
-
-## What changed in v3
-
 - **Long-running async mode:** `POST /agent/review-opportunity-async` creates a
   task, returns immediately, and runs the workflow in a background runner with
   persisted status transitions (`queued → running → completed/pending_approval/error`).
   The synchronous endpoint is unchanged.
-- **Role-based multi-agent layer:** four bounded roles
-  (`CustomerContextAgent`, `DealAnalysisAgent`, `CRMGovernanceAgent`,
-  `ExecutiveSynthesisAgent`) wrap the deterministic tools; LangGraph supervises.
-  See [`multi_agent_design.md`](multi_agent_design.md).
+- **Role-based multi-agent layer:** four bounded roles (`CustomerContextAgent`,
+  `DealAnalysisAgent`, `CRMGovernanceAgent`, `ExecutiveSynthesisAgent`) wrap the
+  deterministic tools; LangGraph supervises. See [`multi_agent_design.md`](multi_agent_design.md).
 - **Node instrumentation:** a wrapper captures `duration_ms` + status per node,
   surfaced via the `/trace` endpoint.
-- **Docker-build CI job:** validates the image builds (no deploy) — now three CI jobs.
+- **Docker-build CI job:** validates the image builds (no deploy) — three CI jobs total.
+- **Demo assets** (`docs/demo/`) and `docs/productionization.md` + `docs/project_review.md`.
 
-## How to explain the async / long-running design
+## Optional LLM synthesis design
 
-"The sync endpoint runs the graph inline and returns the final state. The async
+The agent's decisions are deterministic and auditable — risk scoring, approval
+routing, and writeback are rules, not model output. The LLM sits at the very end
+and only turns the structured report into a readable executive summary; it is
+architecturally prevented from triggering a writeback or skipping approval.
+Because it sits behind a provider interface with a deterministic fallback, the
+whole suite runs with no API key.
+
+## SQLite and PostgreSQL CI strategy
+
+Two CI jobs. The SQLite job runs the full offline suite fast, with zero
+infrastructure — logic, agent, and approval tests live there. The PostgreSQL job
+spins up a `pgvector/pgvector:pg16` container and runs integration tests that
+exercise the real pgvector path (extension enabled, native cosine-distance search,
+agent state persisted in Postgres). One codebase, two backends, verified by CI
+rather than asserted.
+
+## Async execution design
+
+The sync endpoint runs the graph inline and returns the final state. The async
 endpoint creates the task, returns a `task_id` immediately, and runs the same
 graph in a background runner that opens its own DB session so it survives request
-teardown. Status is persisted at each transition, and the client polls
-`/agent/tasks/{id}` or `/trace`. It's deliberately a lightweight local runner —
-in production I'd put the same task behind a queue/worker and the LangGraph
-Postgres checkpointer, which the code is already shaped for."
+teardown. Status is persisted at each transition, and clients poll
+`/agent/tasks/{id}` or `/trace`. It is a deliberately lightweight in-process
+runner; in production the same task would sit behind a queue/worker and the
+LangGraph Postgres checkpointer, which the code is already shaped for.
 
-## How to explain "multi-agent" without overclaiming
+## Role-based agent coordination design
 
-"It's role-based, not autonomous. Each role owns one responsibility and wraps
-pre-approved tools; LangGraph is the supervisor that orders them and owns
-routing, including the human-approval pause. That gives the separation-of-concerns
+The design is role-based, not autonomous. Each role owns one responsibility and
+wraps pre-approved tools; LangGraph is the supervisor that orders them and owns
+routing, including the human-approval pause. This gives the separation-of-concerns
 benefit of multi-agent systems while staying deterministic, testable, and
-auditable — and only the synthesis role can touch the LLM, which still can't write
-to the CRM. I can speak to the trade-off vs. free-form ReAct agents: I chose
-bounded roles because enterprise CRM writes need predictability and an audit
-trail."
+auditable — and only the synthesis role can touch the LLM, which still cannot
+write to the CRM. The trade-off vs. free-form ReAct agents is intentional:
+bounded roles are chosen because enterprise CRM writes need predictability and an
+audit trail.
+
+## Production readiness
+
+Not production-ready, and stated explicitly throughout: it runs locally and in CI
+and is not deployed. What *is* production-style: durable restart-safe state,
+node-level audit logs and a trace endpoint, idempotent approval handling, a hard
+guardrail that the LLM cannot write to the CRM, and a native pgvector path tested
+in CI. What is missing for production is captured in `docs/productionization.md`:
+an async worker/queue, the LangGraph Postgres checkpointer, real embedding/LLM
+providers, OpenTelemetry/LangSmith tracing, and auth/multi-tenancy.
+
+## Future improvements
+
+In priority order: move execution to a durable queue/worker and adopt the
+LangGraph Postgres checkpointer for native interrupt/resume; swap in a real
+embedding model and a pgvector ANN index; add OpenTelemetry/LangSmith tracing
+keyed by `task_id`; then auth, multi-tenancy, and a labeled evaluation set to
+measure decision accuracy rather than just behavior.

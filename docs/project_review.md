@@ -45,7 +45,7 @@ A candid self-assessment, written the way I'd discuss it with a senior reviewer.
 - **Evaluation** harness + docs.
 - **`/agent/tasks/{id}/trace`** observability endpoint.
 - Hardened **error handling / idempotency** for approval/rejection, with tests.
-- Demo assets (commands, sample JSON responses) and interview/productionization docs.
+- Demo assets (commands, sample JSON responses) and technical-walkthrough/productionization docs.
 - Optional **HubSpot CRM adapter** (dry-run default, strict allowlist, mocked tests).
 
 ## What was improved in v3
