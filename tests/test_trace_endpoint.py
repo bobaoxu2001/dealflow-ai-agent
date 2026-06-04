@@ -21,6 +21,19 @@ def test_trace_returns_ordered_node_steps(client):
     assert {"retrieve_crm_context", "analyze_risks", "finalize_report"} <= set(nodes)
 
 
+def test_trace_includes_timing_metadata(client):
+    body = client.post(
+        "/agent/review-opportunity",
+        json={"opportunity_id": "OPP-DEMO2", "task": "timing check"},
+    ).json()
+    trace = client.get(f"/agent/tasks/{body['task_id']}/trace").json()
+
+    # Instrumentation attaches duration_ms (and status) to every node step.
+    assert all("duration_ms" in s for s in trace["trace"])
+    assert all(s["duration_ms"] is not None and s["duration_ms"] >= 0 for s in trace["trace"])
+    assert all(s["status"] for s in trace["trace"])
+
+
 def test_trace_for_unknown_task_is_404(client):
     resp = client.get("/agent/tasks/TASK-does-not-exist/trace")
     assert resp.status_code == 404

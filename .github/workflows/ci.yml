@@ -77,3 +77,18 @@ jobs:
 
       - name: Run pgvector integration tests
         run: pytest tests/integration -q
+
+  # ---------------------------------------------------------------------------
+  # Job 3: validate the Docker image builds (build only — nothing is deployed).
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: docker build (no deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t dealflow-ai-agent:ci .
+
+      - name: Smoke-check the image imports the app
+        run: docker run --rm dealflow-ai-agent:ci python -c "import app.main; print('image OK')"

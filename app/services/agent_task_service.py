@@ -20,13 +20,19 @@ class AgentTaskService:
     def __init__(self, session: Session):
         self.session = session
 
-    def create_task(self, opportunity_id: str, account_id: str | None, user_task: str) -> AgentTask:
+    def create_task(
+        self,
+        opportunity_id: str,
+        account_id: str | None,
+        user_task: str,
+        execution_status: str = "running",
+    ) -> AgentTask:
         task = AgentTask(
             task_id=new_task_id(),
             opportunity_id=opportunity_id,
             account_id=account_id,
             user_task=user_task,
-            execution_status="running",
+            execution_status=execution_status,
             approval_status="not_required",
         )
         self.session.add(task)
@@ -56,6 +62,7 @@ class AgentTaskService:
         output_summary: str = "",
         status: str = "ok",
         error_message: str | None = None,
+        duration_ms: float | None = None,
     ) -> AgentAuditLog:
         log = AgentAuditLog(
             task_id=task_id,
@@ -64,7 +71,20 @@ class AgentTaskService:
             output_summary=output_summary[:2000] if output_summary else None,
             status=status,
             error_message=error_message,
+            duration_ms=duration_ms,
         )
         self.session.add(log)
         self.session.flush()
         return log
+
+    def set_last_audit_duration(self, task_id: str, node_name: str, duration_ms: float) -> None:
+        """Attach a timing measurement to the most recent audit row for a node."""
+        log = self.session.execute(
+            select(AgentAuditLog)
+            .where(AgentAuditLog.task_id == task_id, AgentAuditLog.node_name == node_name)
+            .order_by(AgentAuditLog.id.desc())
+        ).scalars().first()
+        if log is not None and log.duration_ms is None:
+            log.duration_ms = duration_ms
+            self.session.add(log)
+            self.session.flush()

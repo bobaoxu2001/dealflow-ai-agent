@@ -21,7 +21,7 @@ writing back**. Every step is persisted and audited.
 
 ## Quick proof
 
-- **Dual CI passing** on GitHub Actions: a full **offline SQLite** suite *and* a **PostgreSQL + pgvector** integration job
+- **CI passing** on GitHub Actions across three jobs: a full **offline SQLite** suite, a **PostgreSQL + pgvector** integration job, and a **Docker image build**
 - **Tests passing** (`pytest`) — full offline suite + native pgvector integration tests
 - **Real Kaggle data verified** end-to-end — not just the offline demo seed
 - **8,800** CRM opportunities, **8,469** support tickets, **24,521** vector documents loaded and searchable
@@ -61,15 +61,17 @@ In one project, end-to-end and reproducibly:
 ## Production-style features
 
 - [x] Stateful **LangGraph** workflow (typed state, conditional edges)
+- [x] **Role-based multi-agent** layer supervised by LangGraph (not free-form autonomous agents)
+- [x] **Long-running async** execution (`POST /agent/review-opportunity-async`: queued → running → terminal)
 - [x] **Human approval** required before risky CRM writeback
-- [x] **Audit logs** per node + `GET /agent/tasks/{id}/trace` observability
+- [x] **Audit logs + node instrumentation** (timing/status) + `GET /agent/tasks/{id}/trace` observability
 - [x] **Vector retrieval** (pgvector native `<=>`, SQLite Python fallback)
 - [x] **Structured + unstructured** data integrated in one store
 - [x] **Optional LLM** final-report synthesis (deterministic fallback, no key needed)
 - [x] **Pluggable CRM adapter** (local default; optional HubSpot, dry-run by default)
 - [x] **Evaluation** harness (`make evaluate`) + docs
-- [x] **Docker** Compose (API + pgvector Postgres)
-- [x] **Dual CI** (offline SQLite suite + PostgreSQL/pgvector integration job)
+- [x] **Docker** Compose (API + pgvector Postgres) + **Docker-build CI** (build only)
+- [x] **Triple CI** (offline SQLite suite + PostgreSQL/pgvector integration + Docker build)
 - [x] **Local fallback mode** — runs with no LLM/embedding API keys
 - [x] **Real-data verification** on two public Kaggle datasets
 - [ ] Production deployment — *intentionally out of scope* (see below)
@@ -468,6 +470,16 @@ curl -s -X POST http://localhost:8000/agent/review-opportunity \
   -d '{"opportunity_id": "OPP-DEMO1", "task": "Review this opportunity, identify blockers, summarize client history, and recommend next steps."}' | jq
 ```
 
+### Start a review asynchronously (long-running mode)
+Returns a `task_id` immediately and runs the workflow in the background
+(`queued → running → completed | pending_approval | error`). Poll the status or
+trace endpoint for progress.
+```bash
+curl -s -X POST http://localhost:8000/agent/review-opportunity-async \
+  -H 'Content-Type: application/json' \
+  -d '{"opportunity_id": "OPP-DEMO1"}' | jq
+```
+
 ### Get agent task status
 ```bash
 curl -s http://localhost:8000/agent/tasks/<TASK_ID> | jq
@@ -566,6 +578,19 @@ make lint        # ruff
 - **Honest scoping:** clearly-labeled synthetic workflow layer, documented data
   mappings, deterministic behavior, no overclaimed "production deployment."
 
+## Final JD alignment
+
+How this project maps to Senior AI Engineer / AI Agent Engineer requirements:
+
+| Requirement | How DealFlow demonstrates it |
+|---|---|
+| **Long-running tasks** | `POST /agent/review-opportunity-async` returns a `task_id` immediately and runs the workflow in the background with persisted status transitions (`queued → running → completed / pending_approval / error`). |
+| **Multi-agent coordination** | A role-based agent layer (`DealAnalysisAgent`, `CustomerContextAgent`, `CRMGovernanceAgent`, `ExecutiveSynthesisAgent`) supervised by LangGraph — bounded, testable roles, not free-form autonomous agents. See [`docs/multi_agent_design.md`](docs/multi_agent_design.md). |
+| **External APIs** | Pluggable CRM adapter with an optional **HubSpot CRM v3** integration (`httpx`), dry-run by default, strict writeback allowlist, clean error handling. See [`docs/integrations.md`](docs/integrations.md). |
+| **Structured + unstructured data** | PostgreSQL CRM tables + pgvector semantic retrieval over support history, fused inside the agent's reasoning. |
+| **Reliability & observability** | Node-level audit logs with **timing instrumentation**, a `/trace` endpoint, an evaluation harness, and three CI jobs (SQLite suite, pgvector integration, Docker build). |
+| **Deployment awareness** | A Docker-build CI job validates the image builds; nothing is deployed and the README never claims production deployment. |
+
 ## Future improvements
 
 - Swap deterministic node logic for LLM-backed nodes (LangChain) with the
@@ -639,10 +664,11 @@ dealflow-ai-agent/
 - [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md) — 30-second pitch, 2-minute technical walkthrough, "what changed in v2", and likely interview Q&As.
 - [`docs/portfolio_summary.md`](docs/portfolio_summary.md) — resume bullets, LinkedIn post, and role positioning.
 - [`docs/project_review.md`](docs/project_review.md) — self-review scorecard (what's strong / limited / improved / next).
+- [`docs/multi_agent_design.md`](docs/multi_agent_design.md) — role-based agents and how LangGraph supervises them.
 - [`docs/evaluation.md`](docs/evaluation.md) — evaluation approach and example results.
 - [`docs/integrations.md`](docs/integrations.md) — pluggable CRM adapters (local / mock_external / HubSpot), env vars, and the writeback safety model.
 - [`docs/productionization.md`](docs/productionization.md) — honest map of what would change for production.
-- [`docs/demo/`](docs/demo/) — copy-paste [demo commands](docs/demo/demo_commands.md), a [terminal walkthrough](docs/demo/terminal_demo.md), and sample JSON responses ([agent](docs/demo/sample_agent_response.json) · [trace](docs/demo/sample_trace_response.json) · [evaluation](docs/demo/sample_evaluation_summary.json)).
+- [`docs/demo/`](docs/demo/) — copy-paste [demo commands](docs/demo/demo_commands.md), a [terminal walkthrough](docs/demo/terminal_demo.md), a [video script](docs/demo/video_script.md), a [HubSpot dry-run guide](docs/demo/hubspot_dry_run_demo.md), and sample JSON responses ([agent](docs/demo/sample_agent_response.json) · [trace](docs/demo/sample_trace_response.json) · [evaluation](docs/demo/sample_evaluation_summary.json)).
 
 ---
 

@@ -1,11 +1,15 @@
 """Agent workflow routes: review, status, approve, reject."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_session
-from app.agents.graph import run_review_workflow
+from app.agents.graph import (
+    create_queued_task,
+    run_review_task_in_background,
+    run_review_workflow,
+)
 from app.db.models import AgentAuditLog
 from app.schemas.agent import (
     AgentTaskResponse,
@@ -36,6 +40,7 @@ def _state_to_response(task_id: str, state: dict) -> AgentTaskResponse:
         crm_update_draft=state.get("crm_update_draft", {}),
         final_report=state.get("final_report", {}),
         audit_log=state.get("audit_log", []),
+        error=state.get("error"),
     )
 
 
@@ -45,6 +50,23 @@ def review_opportunity(req: ReviewOpportunityRequest, session: Session = Depends
         raise HTTPException(status_code=404, detail=f"Opportunity {req.opportunity_id} not found")
     state = run_review_workflow(session, req.opportunity_id, req.task)
     return _state_to_response(state["task_id"], state)
+
+
+@router.post("/review-opportunity-async", response_model=AgentTaskResponse)
+def review_opportunity_async(
+    req: ReviewOpportunityRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
+    """Long-running mode: create the task, return immediately, run in background.
+
+    Status transitions: queued -> running -> completed | pending_approval | error.
+    Poll GET /agent/tasks/{task_id} (or /trace) for progress. An unknown
+    opportunity is accepted, then terminated as `error` by the background runner.
+    """
+    task = create_queued_task(session, req.opportunity_id, req.task)
+    background_tasks.add_task(run_review_task_in_background, task.task_id)
+    return _state_to_response(task.task_id, task.state or {})
 
 
 @router.get("/tasks/{task_id}", response_model=AgentTaskResponse)
@@ -76,6 +98,7 @@ def get_task_trace(task_id: str, session: Session = Depends(get_session)):
             step=i + 1,
             node_name=log.node_name,
             status=log.status,
+            duration_ms=log.duration_ms,
             input_summary=log.input_summary,
             output_summary=log.output_summary,
             error_message=log.error_message,

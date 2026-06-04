@@ -28,6 +28,7 @@ class AgentTaskResponse(BaseModel):
     crm_update_draft: dict[str, Any] = {}
     final_report: dict[str, Any] = {}
     audit_log: list[dict[str, Any]] = []
+    error: str | None = None
 
 
 class ApprovalRequest(BaseModel):
@@ -39,6 +40,7 @@ class TraceStep(BaseModel):
     step: int
     node_name: str
     status: str
+    duration_ms: float | None = None
     input_summary: str | None = None
     output_summary: str | None = None
     error_message: str | None = None

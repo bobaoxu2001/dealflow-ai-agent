@@ -265,3 +265,40 @@ checkpointer for native interrupt/resume; swap in a real embedding model + a
 pgvector ANN index; add OpenTelemetry/LangSmith tracing keyed by task_id; then
 auth, multi-tenancy, and a labeled evaluation set to measure decision accuracy
 rather than just behavior."
+
+---
+
+## What changed in v3 (JD-alignment pass)
+
+- **Long-running async mode:** `POST /agent/review-opportunity-async` creates a
+  task, returns immediately, and runs the workflow in a background runner with
+  persisted status transitions (`queued → running → completed/pending_approval/error`).
+  The synchronous endpoint is unchanged.
+- **Role-based multi-agent layer:** four bounded roles
+  (`CustomerContextAgent`, `DealAnalysisAgent`, `CRMGovernanceAgent`,
+  `ExecutiveSynthesisAgent`) wrap the deterministic tools; LangGraph supervises.
+  See [`multi_agent_design.md`](multi_agent_design.md).
+- **Node instrumentation:** a wrapper captures `duration_ms` + status per node,
+  surfaced via the `/trace` endpoint.
+- **Docker-build CI job:** validates the image builds (no deploy) — now three CI jobs.
+
+## How to explain the async / long-running design
+
+"The sync endpoint runs the graph inline and returns the final state. The async
+endpoint creates the task, returns a `task_id` immediately, and runs the same
+graph in a background runner that opens its own DB session so it survives request
+teardown. Status is persisted at each transition, and the client polls
+`/agent/tasks/{id}` or `/trace`. It's deliberately a lightweight local runner —
+in production I'd put the same task behind a queue/worker and the LangGraph
+Postgres checkpointer, which the code is already shaped for."
+
+## How to explain "multi-agent" without overclaiming
+
+"It's role-based, not autonomous. Each role owns one responsibility and wraps
+pre-approved tools; LangGraph is the supervisor that orders them and owns
+routing, including the human-approval pause. That gives the separation-of-concerns
+benefit of multi-agent systems while staying deterministic, testable, and
+auditable — and only the synthesis role can touch the LLM, which still can't write
+to the CRM. I can speak to the trade-off vs. free-form ReAct agents: I chose
+bounded roles because enterprise CRM writes need predictability and an audit
+trail."

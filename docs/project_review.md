@@ -11,7 +11,9 @@ A candid self-assessment, written the way I'd discuss it with a senior reviewer.
 | Structured + unstructured data | 🟢 Strong | PostgreSQL CRM tables + pgvector retrieval over support/notes. |
 | Human-in-the-loop safety | 🟢 Strong | Explicit, configurable approval rule; LLM cannot bypass it or write CRM. |
 | Observability / audit | 🟢 Strong | Node-level audit logs + `/trace` endpoint, correlated by `task_id`. |
-| Testing | 🟢 Strong | Full offline suite (SQLite) + native pgvector integration job in CI. |
+| Testing | 🟢 Strong | Full offline suite (SQLite) + native pgvector integration + Docker-build jobs in CI. |
+| Long-running execution | 🟢 Strong | Async endpoint + background runner with persisted status transitions. |
+| Multi-agent design | 🟢 Strong | Bounded role agents supervised by LangGraph; documented and unit-tested. |
 | Evaluation | 🟡 Adequate | Deterministic sanity/regression checks, not a labeled benchmark. |
 | LLM usage | 🟡 Deliberate | Deterministic by default; optional LLM only for final narrative synthesis. |
 | Productionization | 🟡 Documented | Retry/queue/checkpointer/OTel designed and documented, not built. |
@@ -44,10 +46,20 @@ A candid self-assessment, written the way I'd discuss it with a senior reviewer.
 - **`/agent/tasks/{id}/trace`** observability endpoint.
 - Hardened **error handling / idempotency** for approval/rejection, with tests.
 - Demo assets (commands, sample JSON responses) and interview/productionization docs.
+- Optional **HubSpot CRM adapter** (dry-run default, strict allowlist, mocked tests).
+
+## What was improved in v3 (JD-alignment pass)
+
+- **Long-running async** endpoint (`/agent/review-opportunity-async`) with a
+  background runner and persisted `queued → running → terminal` transitions.
+- **Role-based multi-agent layer** supervised by LangGraph (+ `multi_agent_design.md`).
+- **Node instrumentation** (per-node `duration_ms` + status) surfaced via `/trace`.
+- **Docker-build CI job** (build only, no deploy) — three CI jobs total.
+- Demo **video script** and refreshed docs.
 
 ## What I'd productionize next
 
-In priority order: async worker + LangGraph Postgres checkpointer → real
+In priority order: durable queue/worker + LangGraph Postgres checkpointer → real
 embedding/LLM providers + pgvector ANN index → OpenTelemetry/LangSmith tracing →
 auth, multi-tenancy, and a labeled evaluation set. Details in
 [`productionization.md`](productionization.md).

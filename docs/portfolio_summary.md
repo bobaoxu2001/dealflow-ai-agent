@@ -14,28 +14,34 @@ framing: a portfolio project that runs locally and in CI (not production-deploye
   customer-support history from two public Kaggle datasets (8,800 opportunities,
   8,469 tickets, 24,521 embedded documents).
 - Designed a LangGraph orchestration with a 10-node stateful workflow, dynamic
-  tool routing, human-in-the-loop approval, and CRM-writeback safeguards.
+  tool routing, human-in-the-loop approval, CRM-writeback safeguards, and a
+  long-running async execution mode (background runner with persisted status).
+- Structured the agent as a role-based multi-agent layer (context / analysis /
+  CRM-governance / executive-synthesis) supervised by LangGraph — bounded,
+  testable roles rather than free-form autonomous agents.
 - Implemented a PostgreSQL + pgvector retrieval layer combining structured CRM
   records with embedded support tickets, client/risk notes, and meeting notes,
   behind a swappable embedding-provider abstraction.
-- Engineered restart-safe state persistence, node-level audit logs, and a
-  `/trace` observability endpoint; added an optional LLM final-synthesis layer
-  (deterministic fallback) that is architecturally barred from triggering CRM writes.
-- Containerized the FastAPI service with Docker Compose (API + pgvector Postgres)
-  and built dual GitHub Actions CI: a full offline SQLite suite plus a native
-  PostgreSQL + pgvector integration job; added a deterministic evaluation harness.
+- Engineered restart-safe state persistence, node-level audit logs with timing
+  instrumentation, and a `/trace` observability endpoint; added an optional LLM
+  final-synthesis layer (deterministic fallback) barred from triggering CRM writes,
+  and an optional external HubSpot CRM adapter (dry-run by default, strict allowlist).
+- Containerized the FastAPI service with Docker Compose and built three GitHub
+  Actions CI jobs (offline SQLite suite, native PostgreSQL + pgvector integration,
+  Docker image build) plus a deterministic evaluation harness.
 
 **Condensed (3-bullet) version**
 
-- Built a LangGraph enterprise CRM agent: stateful 10-node workflow with tool
-  routing, human-in-the-loop approval, and audited CRM writeback over FastAPI +
-  PostgreSQL/pgvector.
+- Built a LangGraph enterprise CRM agent: stateful workflow with role-based
+  agents, tool routing, long-running async execution, human-in-the-loop approval,
+  and audited CRM writeback over FastAPI + PostgreSQL/pgvector.
 - Combined structured CRM data with vector retrieval over 24,521 embedded
   support/notes documents (8,800 opportunities, 8,469 tickets from public Kaggle
-  data + a documented synthetic linking layer).
-- Shipped dual CI (full offline SQLite suite + native pgvector integration job),
-  an evaluation harness, and a trace endpoint; runs fully offline with no LLM/API
-  keys via deterministic fallbacks (production-style prototype, not deployed).
+  data + a documented synthetic linking layer); optional HubSpot CRM adapter.
+- Shipped three CI jobs (offline SQLite suite + native pgvector integration +
+  Docker build), an evaluation harness, and a timing-instrumented trace endpoint;
+  runs fully offline with no LLM/API keys via deterministic fallbacks
+  (production-style prototype, not deployed).
 
 ---
 
