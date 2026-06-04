@@ -49,9 +49,12 @@ class Settings(BaseSettings):
     openai_embedding_model: str = Field(default="text-embedding-3-small")
 
     # --- LLM (optional) ---
-    # Nodes use deterministic heuristics by default; an LLM is optional polish.
-    llm_provider: str = Field(default="none")
-    openai_chat_model: str = Field(default="gpt-4o-mini")
+    # Agent logic/routing is deterministic; an LLM only synthesizes the final
+    # narrative report. "local" -> deterministic template (no key). "openai" ->
+    # real LLM if OPENAI_API_KEY is set (falls back to local otherwise).
+    llm_provider: str = Field(default="local")
+    llm_model: str = Field(default="gpt-4o-mini")
+    openai_chat_model: str = Field(default="gpt-4o-mini")  # kept for back-compat
 
     # --- Agent / risk thresholds ---
     high_risk_threshold: float = Field(default=0.6)

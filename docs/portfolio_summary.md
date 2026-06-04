@@ -18,11 +18,12 @@ framing: a portfolio project that runs locally and in CI (not production-deploye
 - Implemented a PostgreSQL + pgvector retrieval layer combining structured CRM
   records with embedded support tickets, client/risk notes, and meeting notes,
   behind a swappable embedding-provider abstraction.
-- Engineered restart-safe state persistence and node-level audit logs for
-  transparency and debuggability, with approval/rejection paths recorded end to
-  end.
+- Engineered restart-safe state persistence, node-level audit logs, and a
+  `/trace` observability endpoint; added an optional LLM final-synthesis layer
+  (deterministic fallback) that is architecturally barred from triggering CRM writes.
 - Containerized the FastAPI service with Docker Compose (API + pgvector Postgres)
-  and added GitHub Actions CI (install → import check → 17 passing tests → lint).
+  and built dual GitHub Actions CI: a full offline SQLite suite plus a native
+  PostgreSQL + pgvector integration job; added a deterministic evaluation harness.
 
 **Condensed (3-bullet) version**
 
@@ -32,8 +33,9 @@ framing: a portfolio project that runs locally and in CI (not production-deploye
 - Combined structured CRM data with vector retrieval over 24,521 embedded
   support/notes documents (8,800 opportunities, 8,469 tickets from public Kaggle
   data + a documented synthetic linking layer).
-- Containerized with Docker and shipped GitHub Actions CI (17/17 tests, lint);
-  runs fully offline with no LLM/API keys via deterministic fallbacks.
+- Shipped dual CI (full offline SQLite suite + native pgvector integration job),
+  an evaluation harness, and a trace endpoint; runs fully offline with no LLM/API
+  keys via deterministic fallbacks (production-style prototype, not deployed).
 
 ---
 
@@ -62,8 +64,9 @@ framing: a portfolio project that runs locally and in CI (not production-deploye
 > deterministic fallbacks, so there are no API keys required to try it.
 >
 > It's a portfolio project (not production-deployed), but it's built like one:
-> CI green, 17/17 tests, modular services, honest docs on what's real data vs. a
-> documented synthetic linking layer.
+> dual CI (offline SQLite suite + a PostgreSQL/pgvector integration job), an
+> evaluation harness, a trace endpoint, modular services, and honest docs on
+> what's real data vs. a documented synthetic linking layer.
 >
 > Code + write-up 👇
 > #AI #LLM #LangGraph #AIAgents #FastAPI #pgvector #MachineLearning

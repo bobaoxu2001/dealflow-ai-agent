@@ -21,14 +21,72 @@ writing back**. Every step is persisted and audited.
 
 ## Quick proof
 
-- ✅ **CI passing** on GitHub Actions (install → import check → tests → lint, from a clean runner)
-- ✅ **17/17 tests passing** (`pytest`)
+- ✅ **Dual CI passing** on GitHub Actions: a full **offline SQLite** suite *and* a **PostgreSQL + pgvector** integration job
+- ✅ **Tests passing** (`pytest`) — full offline suite + native pgvector integration tests
 - ✅ **Real Kaggle data verified** end-to-end — not just the offline demo seed
 - 📊 **8,800** CRM opportunities · **8,469** support tickets · **24,521** vector documents loaded and searchable
 - 🤖 Real opportunity **`OM8LELJW`** (account `ACC-0039` / *Iselectrics*) run through the full agent: reviewed at **risk 0.9 → `pending_approval` → approved writeback** (`stage`: `Engaging` → `On Hold`), persisted with audit logs
 
 > Full numbers and provenance are in [Real data verification](#real-data-verification).
 > Note: this is a portfolio project — it runs locally and in CI, and is **not** deployed to production.
+
+---
+
+## What this proves
+
+In one project, end-to-end and reproducibly:
+
+- I can build **stateful, multi-step agent orchestration** in LangGraph — not a
+  prompt chain — with conditional routing and a durable human-in-the-loop pause.
+- I can combine **structured (PostgreSQL) and unstructured (pgvector) data**
+  inside an agent's reasoning, behind a clean services layer.
+- I can put **safety and auditability first**: explicit approval rules, node-level
+  audit logs, an execution-trace endpoint, and an LLM that is *architecturally
+  barred* from writing to the CRM.
+- I can ship it like an engineer: **dual CI** (SQLite + pgvector), an
+  **evaluation harness**, idempotent error handling, Docker, and honest docs.
+
+## Why this is not just a chatbot
+
+| A chatbot… | DealFlow AI Agent… |
+|---|---|
+| Returns a text reply | Runs a 10-node **stateful workflow** with conditional routing |
+| Is stateless per turn | **Persists state**; a pending task survives a restart and resumes |
+| Acts immediately | **Pauses for human approval** before any high-risk CRM write |
+| Has no audit trail | Writes **node-level audit logs** + exposes a **/trace** endpoint |
+| Lets the model "do things" | The LLM **cannot** trigger a writeback or skip approval — that logic is deterministic |
+| Reads one context window | Retrieves **structured CRM + vector search** over support history |
+
+## Production-style features
+
+- [x] Stateful **LangGraph** workflow (typed state, conditional edges)
+- [x] **Human approval** required before risky CRM writeback
+- [x] **Audit logs** per node + `GET /agent/tasks/{id}/trace` observability
+- [x] **Vector retrieval** (pgvector native `<=>`, SQLite Python fallback)
+- [x] **Structured + unstructured** data integrated in one store
+- [x] **Optional LLM** final-report synthesis (deterministic fallback, no key needed)
+- [x] **Evaluation** harness (`make evaluate`) + docs
+- [x] **Docker** Compose (API + pgvector Postgres)
+- [x] **Dual CI** (offline SQLite suite + PostgreSQL/pgvector integration job)
+- [x] **Local fallback mode** — runs with no LLM/embedding API keys
+- [x] **Real-data verification** on two public Kaggle datasets
+- [ ] Production deployment — *intentionally out of scope* (see below)
+
+## Known limitations / honest scope
+
+- **Not production-deployed.** It runs locally and in CI. Productionization is
+  designed and documented in [`docs/productionization.md`](docs/productionization.md), not built.
+- **Deterministic heuristics by default.** Risk scoring and CRM drafting are
+  explainable rules (for testability), not learned models. An LLM is optional and
+  only writes the narrative summary.
+- **Synthetic linking layer.** The two Kaggle datasets share no native IDs, so
+  support tickets are linked to CRM accounts via a documented, deterministic
+  (seeded) mapping. Underlying rows are real; the join is synthetic and flagged.
+- **Embedding quality.** The default local hashing embedder is key-free but not
+  semantically strong; swap in a real model via one config change.
+- **CI database split.** The SQLite job runs the full offline suite; the
+  PostgreSQL job verifies the native pgvector path with the demo seed (CI does not
+  download Kaggle data).
 
 ---
 
@@ -385,6 +443,11 @@ curl -s -X POST http://localhost:8000/agent/review-opportunity \
 curl -s http://localhost:8000/agent/tasks/<TASK_ID> | jq
 ```
 
+### Get the execution trace (ordered node-by-node audit)
+```bash
+curl -s http://localhost:8000/agent/tasks/<TASK_ID>/trace | jq
+```
+
 ### Approve a pending CRM writeback (resumes the workflow)
 ```bash
 curl -s -X POST http://localhost:8000/agent/tasks/<TASK_ID>/approve \
@@ -543,8 +606,12 @@ dealflow-ai-agent/
 
 ## Further docs
 
-- [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md) — 30-second pitch, 2-minute technical walkthrough, and 10 likely interview Q&As.
+- [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md) — 30-second pitch, 2-minute technical walkthrough, "what changed in v2", and likely interview Q&As.
 - [`docs/portfolio_summary.md`](docs/portfolio_summary.md) — resume bullets, LinkedIn post, and role positioning.
+- [`docs/project_review.md`](docs/project_review.md) — self-review scorecard (what's strong / limited / improved / next).
+- [`docs/evaluation.md`](docs/evaluation.md) — evaluation approach and example results.
+- [`docs/productionization.md`](docs/productionization.md) — honest map of what would change for production.
+- [`docs/demo/`](docs/demo/) — copy-paste [demo commands](docs/demo/demo_commands.md), a [terminal walkthrough](docs/demo/terminal_demo.md), and sample JSON responses ([agent](docs/demo/sample_agent_response.json) · [trace](docs/demo/sample_trace_response.json) · [evaluation](docs/demo/sample_evaluation_summary.json)).
 
 ---
 

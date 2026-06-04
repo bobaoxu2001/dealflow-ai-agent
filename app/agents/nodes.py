@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from app.services.llm_service import get_llm_provider
 from app.tools import audit_tools
 from app.tools.approval_tools import needs_human_approval
 from app.tools.crm_tools import crm_read, crm_writeback
@@ -210,9 +211,14 @@ def make_nodes(session: Session) -> dict:
             "approval_status": state.get("approval_status"),
             "documents_reviewed": len(state.get("retrieved_documents", [])),
         }
+        # Optional LLM synthesis: turns the structured report into a narrative.
+        # The LLM never decides writeback/approval — those are already settled.
+        llm = get_llm_provider()
+        report["executive_summary"] = llm.synthesize_report(report)
+        report["synthesized_by"] = llm.name
         audit = audit_tools.record(
             session, state, "finalize_report",
-            output_summary="report assembled",
+            output_summary=f"report assembled (summary by '{llm.name}')",
         )
         return {
             "final_report": report,

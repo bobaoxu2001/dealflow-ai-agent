@@ -23,7 +23,11 @@ class ApprovalService:
             raise ValueError(f"Task {task_id} not found")
         if task.approval_status != "pending":
             raise ValueError(
-                f"Task {task_id} is not pending approval (status={task.approval_status})"
+                f"Task {task_id} is not awaiting approval "
+                f"(approval_status={task.approval_status!r}, "
+                f"execution_status={task.execution_status!r}). "
+                "Only tasks in 'pending' approval can be approved or rejected; "
+                "this is a no-op to keep the task's state consistent."
             )
         state = dict(task.state or {})
         state["approval_status"] = "approved"
@@ -37,7 +41,11 @@ class ApprovalService:
             raise ValueError(f"Task {task_id} not found")
         if task.approval_status != "pending":
             raise ValueError(
-                f"Task {task_id} is not pending approval (status={task.approval_status})"
+                f"Task {task_id} is not awaiting approval "
+                f"(approval_status={task.approval_status!r}, "
+                f"execution_status={task.execution_status!r}). "
+                "Only tasks in 'pending' approval can be approved or rejected; "
+                "this is a no-op to keep the task's state consistent."
             )
         state = dict(task.state or {})
         state["approval_status"] = "rejected"

@@ -194,9 +194,11 @@ pretending the data natively connects.
 
 **8. How is it tested, and what do the tests cover?**
 `pytest` covers health, data transformation, model creation, vector insertion +
-retrieval, the agent happy path, the approval-required path, and the rejection
-path — 17 tests. They run on SQLite with the local embedder, so CI needs no
-services or keys.
+retrieval, the agent happy path, the approval-required path, the rejection path,
+LLM synthesis fallback, the trace endpoint, idempotent error handling, and the
+evaluation helpers — 37 tests total. The full offline suite runs on SQLite with
+the local embedder (no services/keys); a separate set of 5 pgvector integration
+tests runs against PostgreSQL in CI.
 
 **9. How would you scale or productionize this?**
 Move embeddings to a hosted model, switch to the Postgres checkpointer, add
@@ -209,3 +211,57 @@ Making one codebase run both on zero-infra SQLite (for CI/tests) and on
 Postgres+pgvector (for the real path) without forking logic — solved with a
 portable vector column and a backend-aware search service. If I rebuilt it, I'd
 start with the LangGraph Postgres checkpointer to make resume even more native.
+
+---
+
+## What changed in v2
+
+A production-readiness pass on top of the working prototype:
+
+- **Optional LLM final-synthesis layer** behind a provider abstraction
+  (`app/services/llm_service.py`). Deterministic local summary by default; OpenAI
+  if a key is set. The LLM only narrates the already-computed report.
+- **PostgreSQL + pgvector CI job** (`pgvector/pgvector:pg16` service container)
+  that verifies the native `<=>` operator — separate from the SQLite full-suite job.
+- **Evaluation harness** (`scripts/evaluate_agent.py`, `docs/evaluation.md`):
+  deterministic checks on retrieval, risk scoring, approval routing, and pipeline integrity.
+- **`GET /agent/tasks/{id}/trace`** observability endpoint (ordered node trace).
+- **Hardened error handling / idempotency** for approve/reject, with tests.
+- **Demo assets** (`docs/demo/`) and `docs/productionization.md` + `docs/project_review.md`.
+
+## How to explain the optional LLM synthesis
+
+"The agent's decisions are deterministic and auditable — risk scoring, approval
+routing, and writeback are rules, not model output. The LLM sits at the very end
+and only turns the structured report into a readable executive summary. It is
+architecturally prevented from triggering a writeback or skipping approval. That
+gives me LLM polish without sacrificing testability or safety — and because it's
+behind a provider interface with a deterministic fallback, the whole suite runs
+with no API key."
+
+## How to explain Postgres CI vs SQLite CI
+
+"Two CI jobs. The SQLite job runs the full offline suite fast, with zero
+infrastructure — that's where logic, agent, and approval tests live. The Postgres
+job spins up a `pgvector/pgvector:pg16` container and runs integration tests that
+exercise the real pgvector path (extension enabled, native cosine-distance
+search, agent state persisted in Postgres). One codebase, two backends, proven by
+CI rather than claimed."
+
+## "Is this production-ready?"
+
+"No — and I'm explicit about that everywhere. It runs locally and in CI; it's not
+deployed. What *is* production-style: durable restart-safe state, node-level audit
+logs and a trace endpoint, idempotent approval handling, a hard guardrail that the
+LLM can't write to the CRM, and a native pgvector path tested in CI. What's
+missing for production is in `docs/productionization.md`: an async worker, the
+LangGraph Postgres checkpointer, real embedding/LLM providers, OpenTelemetry/
+LangSmith tracing, and auth/multi-tenancy."
+
+## "What would you do next?"
+
+"In order: move execution to an async worker and adopt the LangGraph Postgres
+checkpointer for native interrupt/resume; swap in a real embedding model + a
+pgvector ANN index; add OpenTelemetry/LangSmith tracing keyed by task_id; then
+auth, multi-tenancy, and a labeled evaluation set to measure decision accuracy
+rather than just behavior."

@@ -1,4 +1,4 @@
-.PHONY: install dev test lint format init-db seed-demo download inspect transform synth load ingest docker-up docker-down docker-ingest clean
+.PHONY: install dev test test-pg lint format init-db seed-demo evaluate download inspect transform synth load ingest docker-up docker-down docker-ingest clean
 
 install:
 	pip install --upgrade pip && pip install -r requirements.txt
@@ -9,8 +9,17 @@ dev:
 test:
 	pytest
 
+# Run the suite (incl. pgvector integration tests) against a local Postgres.
+# Requires a running pgvector Postgres; override DATABASE_URL as needed.
+test-pg:
+	DATABASE_URL="postgresql+psycopg2://dealflow:dealflow@localhost:5432/dealflow" pytest -q
+
 lint:
 	ruff check app scripts tests
+
+# Run agent evaluation checks against the currently-loaded data.
+evaluate:
+	python -m scripts.evaluate_agent
 
 format:
 	ruff format app scripts tests

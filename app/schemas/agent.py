@@ -33,3 +33,21 @@ class AgentTaskResponse(BaseModel):
 class ApprovalRequest(BaseModel):
     approver: str = Field(default="human")
     reason: str = Field(default="")
+
+
+class TraceStep(BaseModel):
+    step: int
+    node_name: str
+    status: str
+    input_summary: str | None = None
+    output_summary: str | None = None
+    error_message: str | None = None
+    timestamp: str | None = None
+
+
+class TraceResponse(BaseModel):
+    task_id: str
+    execution_status: str
+    approval_status: str
+    step_count: int
+    trace: list[TraceStep] = []

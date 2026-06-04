@@ -25,6 +25,9 @@ data/processed/**
 !data/processed/
 !**/.gitkeep
 
+# --- Generated evaluation output (sample committed under docs/demo/) ---
+reports/
+
 # --- Caches ---
 .pytest_cache/
 .ruff_cache/

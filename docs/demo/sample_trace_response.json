@@ -1,0 +1,80 @@
+{
+  "task_id": "TASK-xxxxxxxxxxxx",
+  "execution_status": "pending_approval",
+  "approval_status": "pending",
+  "step_count": 8,
+  "trace": [
+    {
+      "step": 1,
+      "node_name": "parse_task",
+      "status": "ok",
+      "input_summary": "Review this opportunity, identify blockers, summarize client history, and recommend next steps.",
+      "output_summary": "opportunity_id=OPP-DEMO1",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.063466"
+    },
+    {
+      "step": 2,
+      "node_name": "retrieve_crm_context",
+      "status": "ok",
+      "input_summary": "opportunity_id=OPP-DEMO1",
+      "output_summary": "account_id=ACC-DEMO1, tickets=2",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.069989"
+    },
+    {
+      "step": 3,
+      "node_name": "retrieve_vector_context",
+      "status": "ok",
+      "input_summary": "query='Review this opportunity, identify blockers, summarize client' account_id=ACC-DEMO1",
+      "output_summary": "retrieved 4 documents",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.074609"
+    },
+    {
+      "step": 4,
+      "node_name": "analyze_risks",
+      "status": "ok",
+      "input_summary": "4 docs",
+      "output_summary": "risk_score=1.0, flags=11",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.075882"
+    },
+    {
+      "step": 5,
+      "node_name": "detect_missing_fields",
+      "status": "ok",
+      "input_summary": "opportunity fields",
+      "output_summary": "missing=['close_date']",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.077046"
+    },
+    {
+      "step": 6,
+      "node_name": "recommend_next_steps",
+      "status": "ok",
+      "input_summary": null,
+      "output_summary": "4 recommendations",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.077792"
+    },
+    {
+      "step": 7,
+      "node_name": "draft_crm_update",
+      "status": "ok",
+      "input_summary": null,
+      "output_summary": "proposed changes: ['stage']",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.078466"
+    },
+    {
+      "step": 8,
+      "node_name": "approval_router",
+      "status": "pending_approval",
+      "input_summary": null,
+      "output_summary": "approval required: ['risk_score 1.0 >= threshold 0.6', \"modifies important fields: ['stage']\"]",
+      "error_message": null,
+      "timestamp": "2026-06-04T00:23:26.079066"
+    }
+  ]
+}

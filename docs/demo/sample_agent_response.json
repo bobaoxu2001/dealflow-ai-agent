@@ -1,0 +1,240 @@
+{
+  "task_id": "TASK-xxxxxxxxxxxx",
+  "opportunity_id": "OPP-DEMO1",
+  "account_id": "ACC-DEMO1",
+  "execution_status": "completed",
+  "approval_status": "approved",
+  "requires_human_approval": true,
+  "risk_score": 1.0,
+  "risk_flags": [
+    {
+      "type": "high_priority_tickets",
+      "detail": "2 high/critical tickets",
+      "weight": 0.2
+    },
+    {
+      "type": "signal",
+      "detail": "'refund' x1",
+      "weight": 0.2
+    },
+    {
+      "type": "signal",
+      "detail": "'complaint' x2",
+      "weight": 0.15
+    },
+    {
+      "type": "signal",
+      "detail": "'escalat' x3",
+      "weight": 0.25
+    },
+    {
+      "type": "signal",
+      "detail": "'unhappy' x1",
+      "weight": 0.2
+    },
+    {
+      "type": "signal",
+      "detail": "'delay' x1",
+      "weight": 0.1
+    },
+    {
+      "type": "signal",
+      "detail": "'churn' x2",
+      "weight": 0.3
+    },
+    {
+      "type": "signal",
+      "detail": "'competitor' x3",
+      "weight": 0.25
+    },
+    {
+      "type": "signal",
+      "detail": "'outage' x2",
+      "weight": 0.2
+    },
+    {
+      "type": "signal",
+      "detail": "'cancel' x1",
+      "weight": 0.3
+    },
+    {
+      "type": "signal",
+      "detail": "'critical' x1",
+      "weight": 0.15
+    }
+  ],
+  "missing_fields": [
+    "close_date"
+  ],
+  "recommended_actions": [
+    "Schedule a customer success check-in to address open support issues.",
+    "Review flagged support history for churn/competitor signals before next call.",
+    "Complete missing CRM fields: close_date.",
+    "Escalate to deal-desk: high overall risk score."
+  ],
+  "crm_update_draft": {
+    "opportunity_id": "OPP-DEMO1",
+    "changes": {
+      "stage": "On Hold"
+    },
+    "rationale": "Proposed because of: elevated risk score, missing fields ['close_date']",
+    "applied": {
+      "stage": {
+        "old": "Engaging",
+        "new": "On Hold"
+      }
+    },
+    "writeback_id": "WB-1a51f767af"
+  },
+  "final_report": {
+    "opportunity_id": "OPP-DEMO1",
+    "account_id": "ACC-DEMO1",
+    "risk_score": 1.0,
+    "risk_flags": [
+      {
+        "type": "high_priority_tickets",
+        "detail": "2 high/critical tickets",
+        "weight": 0.2
+      },
+      {
+        "type": "signal",
+        "detail": "'refund' x1",
+        "weight": 0.2
+      },
+      {
+        "type": "signal",
+        "detail": "'complaint' x2",
+        "weight": 0.15
+      },
+      {
+        "type": "signal",
+        "detail": "'escalat' x3",
+        "weight": 0.25
+      },
+      {
+        "type": "signal",
+        "detail": "'unhappy' x1",
+        "weight": 0.2
+      },
+      {
+        "type": "signal",
+        "detail": "'delay' x1",
+        "weight": 0.1
+      },
+      {
+        "type": "signal",
+        "detail": "'churn' x2",
+        "weight": 0.3
+      },
+      {
+        "type": "signal",
+        "detail": "'competitor' x3",
+        "weight": 0.25
+      },
+      {
+        "type": "signal",
+        "detail": "'outage' x2",
+        "weight": 0.2
+      },
+      {
+        "type": "signal",
+        "detail": "'cancel' x1",
+        "weight": 0.3
+      },
+      {
+        "type": "signal",
+        "detail": "'critical' x1",
+        "weight": 0.15
+      }
+    ],
+    "missing_fields": [
+      "close_date"
+    ],
+    "recommended_actions": [
+      "Schedule a customer success check-in to address open support issues.",
+      "Review flagged support history for churn/competitor signals before next call.",
+      "Complete missing CRM fields: close_date.",
+      "Escalate to deal-desk: high overall risk score."
+    ],
+    "crm_update": {
+      "opportunity_id": "OPP-DEMO1",
+      "changes": {
+        "stage": "On Hold"
+      },
+      "rationale": "Proposed because of: elevated risk score, missing fields ['close_date']",
+      "applied": {
+        "stage": {
+          "old": "Engaging",
+          "new": "On Hold"
+        }
+      },
+      "writeback_id": "WB-1a51f767af"
+    },
+    "approval_status": "approved",
+    "documents_reviewed": 4,
+    "executive_summary": "Opportunity OPP-DEMO1 (account ACC-DEMO1) was reviewed against 4 retrieved support/context documents. Overall deal risk is HIGH (score 1.0). Risk signals: high_priority_tickets (2 high/critical tickets); signal ('refund' x1); signal ('complaint' x2); signal ('escalat' x3); signal ('unhappy' x1); signal ('delay' x1); signal ('churn' x2); signal ('competitor' x3); signal ('outage' x2); signal ('cancel' x1); signal ('critical' x1). Missing CRM fields: close_date. Proposed CRM update: stage -> On Hold (approval status: approved). Recommended next steps: Schedule a customer success check-in to address open support issues.; Review flagged support history for churn/competitor signals before next call.; Complete missing CRM fields: close_date.; Escalate to deal-desk: high overall risk score.",
+    "synthesized_by": "local"
+  },
+  "audit_log": [
+    {
+      "node": "parse_task",
+      "status": "ok",
+      "input": "Review this opportunity, identify blockers, summarize client history, and recommend next steps.",
+      "output": "opportunity_id=OPP-DEMO1"
+    },
+    {
+      "node": "retrieve_crm_context",
+      "status": "ok",
+      "input": "opportunity_id=OPP-DEMO1",
+      "output": "account_id=ACC-DEMO1, tickets=2"
+    },
+    {
+      "node": "retrieve_vector_context",
+      "status": "ok",
+      "input": "query='Review this opportunity, identify blockers, summarize client' account_id=ACC-DEMO1",
+      "output": "retrieved 4 documents"
+    },
+    {
+      "node": "analyze_risks",
+      "status": "ok",
+      "input": "4 docs",
+      "output": "risk_score=1.0, flags=11"
+    },
+    {
+      "node": "detect_missing_fields",
+      "status": "ok",
+      "input": "opportunity fields",
+      "output": "missing=['close_date']"
+    },
+    {
+      "node": "recommend_next_steps",
+      "status": "ok",
+      "input": "",
+      "output": "4 recommendations"
+    },
+    {
+      "node": "draft_crm_update",
+      "status": "ok",
+      "input": "",
+      "output": "proposed changes: ['stage']"
+    },
+    {
+      "node": "approval_router",
+      "status": "pending_approval",
+      "input": "",
+      "output": "approval required: ['risk_score 1.0 >= threshold 0.6', \"modifies important fields: ['stage']\"]"
+    },
+    {
+      "node": "writeback_crm",
+      "status": "ok",
+      "input": "changes=['stage']",
+      "output": "applied ['stage'] writeback_id=WB-1a51f767af"
+    },
+    {
+      "node": "finalize_report",
+      "status": "ok",
+      "input": "",
+      "output": "report assembled (summary by 'local')"
+    }
+  ]
+}

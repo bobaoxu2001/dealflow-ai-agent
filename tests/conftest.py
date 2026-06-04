@@ -10,13 +10,19 @@ import tempfile
 
 import pytest
 
-# Configure an isolated DB BEFORE importing any app module (settings are cached
-# at import time and the engine binds to DATABASE_URL immediately).
-_TMP_DB = os.path.join(tempfile.gettempdir(), "dealflow_test.db")
-if os.path.exists(_TMP_DB):
-    os.remove(_TMP_DB)
-os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB}"
-os.environ["EMBEDDING_PROVIDER"] = "local"
+# Configure the DB BEFORE importing any app module (settings are cached at import
+# time and the engine binds to DATABASE_URL immediately).
+#
+# If DATABASE_URL already points at Postgres (the pgvector CI job), respect it so
+# the full suite exercises the native pgvector path. Otherwise default to an
+# isolated temp SQLite file for zero-infra local/CI runs.
+_existing_url = os.environ.get("DATABASE_URL", "")
+if not _existing_url.startswith("postgres"):
+    _TMP_DB = os.path.join(tempfile.gettempdir(), "dealflow_test.db")
+    if os.path.exists(_TMP_DB):
+        os.remove(_TMP_DB)
+    os.environ["DATABASE_URL"] = f"sqlite:///{_TMP_DB}"
+os.environ.setdefault("EMBEDDING_PROVIDER", "local")
 
 from fastapi.testclient import TestClient  # noqa: E402
 

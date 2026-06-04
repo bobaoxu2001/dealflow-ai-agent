@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "checks": 4,
+    "passed": 4,
+    "failed": 0,
+    "all_passed": true
+  },
+  "checks": [
+    {
+      "name": "retrieval_scoped_accuracy",
+      "samples": 6,
+      "correct": 6,
+      "accuracy": 1.0,
+      "passed": true
+    },
+    {
+      "name": "risk_scoring_separation",
+      "risky_score": 1.0,
+      "clean_score": 0.0,
+      "risky_flags": 6,
+      "passed": true
+    },
+    {
+      "name": "approval_routing",
+      "high_risk_change_route": "pending",
+      "no_change_route": "finalize",
+      "approved_route": "writeback",
+      "rejected_route": "finalize",
+      "passed": true
+    },
+    {
+      "name": "data_pipeline_integrity",
+      "counts": {
+        "accounts": 2,
+        "opportunities": 2,
+        "support_tickets": 3,
+        "vector_documents": 6
+      },
+      "non_synthetic_meeting_notes": 0,
+      "non_synthetic_risk_notes": 0,
+      "passed": true
+    }
+  ]
+}
