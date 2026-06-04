@@ -26,6 +26,7 @@ writing back**. Every step is persisted and audited.
 - ✅ **Real Kaggle data verified** end-to-end — not just the offline demo seed
 - 📊 **8,800** CRM opportunities · **8,469** support tickets · **24,521** vector documents loaded and searchable
 - 🤖 Real opportunity **`OM8LELJW`** (account `ACC-0039` / *Iselectrics*) run through the full agent: reviewed at **risk 0.9 → `pending_approval` → approved writeback** (`stage`: `Engaging` → `On Hold`), persisted with audit logs
+- 🔌 Optional real **HubSpot CRM adapter** with dry-run writeback, strict field allowlist, and mocked API tests
 
 > Full numbers and provenance are in [Real data verification](#real-data-verification).
 > Note: this is a portfolio project — it runs locally and in CI, and is **not** deployed to production.
@@ -413,15 +414,18 @@ be swapped for an LLM-backed implementation without touching the graph.
 
 ## Optional real CRM integration
 
-The default project runs **fully locally with no secrets** — CRM reads/writes go
-to its own PostgreSQL/SQLite store. An optional **HubSpot adapter** demonstrates
-that the agent is *ready to integrate with a real external CRM API*, behind a
-pluggable adapter (`app/integrations/crm_adapter.py`): `local` (default),
-`mock_external`, or `hubspot`.
+The default project runs **fully locally with no secrets** — `CRM_ADAPTER=local`
+is the default, and CRM reads/writes go to its own PostgreSQL/SQLite store. An
+optional **HubSpot adapter** demonstrates that the agent is *ready to integrate
+with a real external CRM API*, behind a pluggable adapter
+(`app/integrations/crm_adapter.py`): `local` (default), `mock_external`, or
+`hubspot`.
 
+- **Enable HubSpot** with `CRM_ADAPTER=hubspot` to use the HubSpot CRM v3 API
+  (opt-in; requires `HUBSPOT_ACCESS_TOKEN`).
 - **Writeback is dry-run by default** (`HUBSPOT_DRY_RUN=true`) — the HubSpot
-  adapter validates and maps the change but sends **no** PATCH unless you
-  explicitly disable dry-run.
+  adapter validates and maps the change but sends **no** PATCH. A **real PATCH
+  requires `HUBSPOT_DRY_RUN=false`**.
 - **Human approval is still required** before any writeback — the adapter changes
   *where* writes go, not *whether* they're approved. The LLM has no path to write.
 - Real writes use a **strict field allowlist** (`dealstage`, `amount`,
