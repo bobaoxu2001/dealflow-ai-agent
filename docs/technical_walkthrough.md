@@ -1,8 +1,8 @@
-# DealFlow AI Agent — Interview Walkthrough
+# DealFlow AI Agent — Technical Walkthrough
 
-A speaking guide for demoing and discussing this project. Honest framing: this is
-a **portfolio project** that runs locally and in CI; it is not deployed to
-production.
+A deeper walkthrough of the architecture, workflow, and design decisions, with a
+short speaking guide for demoing the project. Honest framing: this runs locally
+and in CI; it is not deployed to production.
 
 ---
 

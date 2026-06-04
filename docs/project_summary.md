@@ -1,7 +1,8 @@
-# DealFlow AI Agent — Portfolio Summary
+# DealFlow AI Agent — Project Summary
 
-Copy-paste-ready material for resumes, LinkedIn, and job applications. Honest
-framing: a portfolio project that runs locally and in CI (not production-deployed).
+A concise summary of the project and its capabilities (with reusable blurbs).
+Honest framing: a portfolio project that runs locally and in CI (not
+production-deployed).
 
 ---
 

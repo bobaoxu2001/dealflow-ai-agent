@@ -66,17 +66,18 @@ flowchart LR
 
 ## What this proves
 
-In one project, end-to-end and reproducibly:
+End-to-end and reproducibly, this project:
 
-- I can build **stateful, multi-step agent orchestration** in LangGraph — not a
+- Demonstrates **stateful, multi-step agent orchestration** in LangGraph — not a
   prompt chain — with conditional routing and a durable human-in-the-loop pause.
-- I can combine **structured (PostgreSQL) and unstructured (pgvector) data**
-  inside an agent's reasoning, behind a clean services layer.
-- I can put **safety and auditability first**: explicit approval rules, node-level
-  audit logs, an execution-trace endpoint, and an LLM that is *architecturally
-  barred* from writing to the CRM.
-- I can ship it like an engineer: **dual CI** (SQLite + pgvector), an
-  **evaluation harness**, idempotent error handling, Docker, and honest docs.
+- Combines **structured PostgreSQL data with pgvector retrieval** inside the
+  agent's reasoning, behind a clean services layer.
+- Emphasizes **safety and auditability** through approval gates, node-level audit
+  logs, an execution-trace endpoint, and deterministic writeback rules — the LLM
+  is architecturally barred from writing to the CRM.
+- Includes **CI, evaluation, Docker, and reproducible local fallbacks** —
+  multi-job CI (SQLite + pgvector + Docker build), an evaluation harness,
+  idempotent error handling, and key-free offline operation.
 
 ## Why this is not just a chatbot
 
@@ -158,7 +159,7 @@ production.
 | FastAPI backend | [`app/main.py`](app/main.py), [`app/api/`](app/api) |
 | Dockerized runtime | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml), Docker-build CI |
 | CI/CD validation | GitHub Actions: SQLite tests, Postgres/pgvector integration, Docker build ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) |
-| Testing and documentation | `pytest`, evaluation harness, `/trace` endpoint, [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md), [`docs/productionization.md`](docs/productionization.md) |
+| Testing and documentation | `pytest`, evaluation harness, `/trace` endpoint, [`docs/technical_walkthrough.md`](docs/technical_walkthrough.md), [`docs/productionization.md`](docs/productionization.md) |
 
 ---
 
@@ -641,26 +642,7 @@ How the project's capabilities map to the implementation:
 
 ---
 
-## Resume bullets
-
-**DealFlow AI Agent — LangGraph Enterprise CRM Workflow Automation**
-
-- Built a production-style AI agent system that automates long-running CRM
-  opportunity-review workflows across structured sales data and customer-support
-  history from two public Kaggle datasets.
-- Designed LangGraph orchestration with stateful execution, dynamic tool routing,
-  human-in-the-loop approval, and CRM writeback safeguards.
-- Implemented a PostgreSQL + pgvector retrieval layer combining structured CRM
-  records with embedded support tickets, meeting notes, and risk notes, behind a
-  pluggable embedding provider with a deterministic offline fallback.
-- Containerized the FastAPI application with Docker/Compose and added GitHub
-  Actions CI for linting and tests.
-- Created node-level audit logs and persisted execution state to improve
-  transparency, debuggability, and restart-safe resumability.
-
----
-
-## Portfolio case study
+## Case study
 
 - **Problem:** Enterprise teams manage opportunity decisions across fragmented
   CRM records, notes, tickets, and documents.
@@ -670,7 +652,7 @@ How the project's capabilities map to the implementation:
   GitHub Actions CI, and node-level audit logs.
 - **Result:** A production-style AI agent workflow that demonstrates enterprise AI
   orchestration — not just chatbot response generation.
-- **Role relevance:** AI agent engineering, workflow orchestration,
+- **Engineering relevance:** agent orchestration, workflow automation,
   structured/unstructured data integration, long-running task management, and
   maintainable backend architecture.
 
@@ -691,7 +673,7 @@ dealflow-ai-agent/
   tests/               # health, ingestion, vector, agent, approval
   .github/workflows/   # ci.yml
   docker-compose.yml  Dockerfile  Makefile  requirements.txt  .env.example
-  docs/                # interview_walkthrough.md, portfolio_summary.md
+  docs/                # technical_walkthrough.md, project_summary.md, ...
   LICENSE              # MIT
 ```
 
@@ -699,8 +681,8 @@ dealflow-ai-agent/
 
 ## Further docs
 
-- [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md) — 30-second pitch, 2-minute technical walkthrough, "what changed in v2", and likely interview Q&As.
-- [`docs/portfolio_summary.md`](docs/portfolio_summary.md) — resume bullets, LinkedIn post, and role positioning.
+- [`docs/technical_walkthrough.md`](docs/technical_walkthrough.md) — a deeper technical walkthrough of the architecture, workflow, and design decisions.
+- [`docs/project_summary.md`](docs/project_summary.md) — concise project summary and capability highlights.
 - [`docs/project_review.md`](docs/project_review.md) — self-review scorecard (what's strong / limited / improved / next).
 - [`docs/multi_agent_design.md`](docs/multi_agent_design.md) — role-based agents and how LangGraph supervises them.
 - [`docs/evaluation.md`](docs/evaluation.md) — evaluation approach and example results.
