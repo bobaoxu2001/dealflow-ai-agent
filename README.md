@@ -105,28 +105,28 @@ human, and leaves an audit trail you can trust.
 
 This project demonstrates exactly that.
 
-## Final JD alignment
+## Engineering focus
 
-This project was built to mirror the Senior AI Engineer role's focus on
-**production-style AI agents and orchestration systems, not model training**. It
-runs locally and in CI and is **not** deployed to production.
+This project focuses on **production-style AI agent orchestration systems rather
+than model training**. It runs locally and in CI and is **not** deployed to
+production.
 
-## Target role alignment (Senior AI / AI Agent Engineer)
+## Technical capabilities demonstrated
 
-| JD focus | Where it's demonstrated |
+| Capability | Where it's demonstrated |
 |---|---|
-| LangGraph / LangChain agent systems | [`app/agents/graph.py`](app/agents/graph.py), [`app/agents/roles.py`](app/agents/roles.py) |
-| Complex multi-step enterprise workflows | 10-node LangGraph workflow with conditional routing and role-based agents |
+| LangGraph / LangChain agent orchestration | [`app/agents/graph.py`](app/agents/graph.py), [`app/agents/roles.py`](app/agents/roles.py) |
+| Complex multi-step workflows | 10-node LangGraph workflow with conditional routing and role-based agents |
 | Tool routing and dynamic tool usage | [`app/tools/`](app/tools), [`app/integrations/crm_adapter.py`](app/integrations/crm_adapter.py) — vector / risk / CRM-writeback tools |
-| Long-running tasks / execution pipelines | `POST /agent/review-opportunity-async`: `queued → running → completed / pending_approval / error` |
-| Multi-agent coordination | `CustomerContextAgent`, `DealAnalysisAgent`, `CRMGovernanceAgent`, `ExecutiveSynthesisAgent` (supervised by LangGraph) |
-| LLM reasoning + structured data + external APIs | Optional LLM final synthesis, PostgreSQL CRM data, pgvector retrieval, optional HubSpot adapter |
+| Long-running async execution | `POST /agent/review-opportunity-async`: `queued → running → completed / pending_approval / error` |
+| Role-based agent coordination | `CustomerContextAgent`, `DealAnalysisAgent`, `CRMGovernanceAgent`, `ExecutiveSynthesisAgent` (supervised by LangGraph) |
+| LLM synthesis + structured data + external APIs | Optional LLM final synthesis, PostgreSQL CRM data, pgvector retrieval, optional HubSpot adapter |
 | Human-in-the-loop approval | `approval_router` → pause → `approve`/`reject` → resume |
-| PostgreSQL & vector | pgvector integration tests, `vector_documents`, native pgvector CI job ([`app/db/`](app/db), [`vector_search_service.py`](app/services/vector_search_service.py)) |
+| PostgreSQL + pgvector retrieval | pgvector integration tests, `vector_documents`, native pgvector CI job ([`app/db/`](app/db), [`vector_search_service.py`](app/services/vector_search_service.py)) |
 | External data ingestion | Two real Kaggle datasets + scripted pipeline |
 | FastAPI backend | [`app/main.py`](app/main.py), [`app/api/`](app/api) |
-| Docker and runtime environments | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml), Docker-build CI |
-| CI/CD | GitHub Actions: SQLite tests, Postgres/pgvector integration, Docker build ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) |
+| Dockerized runtime | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml), Docker-build CI |
+| CI/CD validation | GitHub Actions: SQLite tests, Postgres/pgvector integration, Docker build ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) |
 | Testing and documentation | `pytest`, evaluation harness, `/trace` endpoint, [`docs/interview_walkthrough.md`](docs/interview_walkthrough.md), [`docs/productionization.md`](docs/productionization.md) |
 
 ---
@@ -573,7 +573,7 @@ make lint        # ruff
 
 ---
 
-## What this demonstrates for AI Engineer roles
+## What this demonstrates
 
 - **Agent orchestration over chat:** a real LangGraph `StateGraph` with typed
   state, conditional routing, tool calls, and a durable human-in-the-loop pause.
@@ -585,11 +585,11 @@ make lint        # ruff
 - **Honest scoping:** clearly-labeled synthetic workflow layer, documented data
   mappings, deterministic behavior, no overclaimed "production deployment."
 
-## JD requirement coverage (detail)
+## Capability coverage (detail)
 
-How this project maps to Senior AI Engineer / AI Agent Engineer requirements:
+How the project's capabilities map to the implementation:
 
-| Requirement | How DealFlow demonstrates it |
+| Capability | How DealFlow implements it |
 |---|---|
 | **Long-running tasks** | `POST /agent/review-opportunity-async` returns a `task_id` immediately and runs the workflow in the background with persisted status transitions (`queued → running → completed / pending_approval / error`). |
 | **Multi-agent coordination** | A role-based agent layer (`DealAnalysisAgent`, `CustomerContextAgent`, `CRMGovernanceAgent`, `ExecutiveSynthesisAgent`) supervised by LangGraph — bounded, testable roles, not free-form autonomous agents. See [`docs/multi_agent_design.md`](docs/multi_agent_design.md). |

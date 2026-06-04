@@ -82,7 +82,7 @@ curl -s localhost:8000/agent/tasks/<TASK_ID> | jq '.execution_status'
   field allowlist, human approval still required, and CI never calls it."
 
 ### Scene 10 — Close (~10s)
-- Back to README **Final JD alignment** section.
+- Back to README **Engineering focus** section.
 - Say: "Stateful LangGraph orchestration, role-based agents, human approval,
   external CRM integration, structured + vector data, audit/trace/evaluation, and
   dual + docker CI — built like production, honest that it isn't deployed."

@@ -48,7 +48,7 @@ A candid self-assessment, written the way I'd discuss it with a senior reviewer.
 - Demo assets (commands, sample JSON responses) and interview/productionization docs.
 - Optional **HubSpot CRM adapter** (dry-run default, strict allowlist, mocked tests).
 
-## What was improved in v3 (JD-alignment pass)
+## What was improved in v3
 
 - **Long-running async** endpoint (`/agent/review-opportunity-async`) with a
   background runner and persisted `queued → running → terminal` transitions.

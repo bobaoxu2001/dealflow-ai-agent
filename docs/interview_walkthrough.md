@@ -268,7 +268,7 @@ rather than just behavior."
 
 ---
 
-## What changed in v3 (JD-alignment pass)
+## What changed in v3
 
 - **Long-running async mode:** `POST /agent/review-opportunity-async` creates a
   task, returns immediately, and runs the workflow in a background runner with
