@@ -19,6 +19,37 @@ writing back**. Every step is persisted and audited.
 
 ---
 
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    U["API consumer / analyst"] --> API["FastAPI request<br/>sync or async"]
+    API --> TASK["Task state<br/>queued / running / pending / completed"]
+
+    TASK --> LG["LangGraph workflow<br/>stateful 10-node orchestration"]
+
+    LG --> ROLES["Role-based agents<br/>Customer Context · Deal Analysis<br/>CRM Governance · Executive Synthesis"]
+
+    ROLES --> CRM["CRM adapter<br/>local · mock external · optional HubSpot"]
+    ROLES --> VEC["Vector search<br/>pgvector support history"]
+    ROLES --> RISK["Risk + missing-field tools"]
+
+    CRM --> PG[("PostgreSQL<br/>CRM tables")]
+    VEC --> DOCS[("pgvector<br/>vector_documents")]
+
+    RISK --> APPROVAL{"Human approval<br/>required?"}
+    APPROVAL -- "high risk / important field" --> WAIT["pending_approval"]
+    WAIT --> HUMAN["Human approve / reject"]
+    HUMAN --> WRITE["CRM writeback<br/>allowlist + dry-run controls"]
+
+    APPROVAL -- "no approval needed" --> FINAL["Final report"]
+
+    WRITE --> FINAL
+    FINAL --> TRACE["Audit logs + trace endpoint"]
+```
+
+---
+
 ## Quick proof
 
 - **CI passing** on GitHub Actions across three jobs: a full **offline SQLite** suite, a **PostgreSQL + pgvector** integration job, and a **Docker image build**
