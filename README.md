@@ -65,6 +65,7 @@ In one project, end-to-end and reproducibly:
 - [x] **Vector retrieval** (pgvector native `<=>`, SQLite Python fallback)
 - [x] **Structured + unstructured** data integrated in one store
 - [x] **Optional LLM** final-report synthesis (deterministic fallback, no key needed)
+- [x] **Pluggable CRM adapter** (local default; optional HubSpot, dry-run by default)
 - [x] **Evaluation** harness (`make evaluate`) + docs
 - [x] **Docker** Compose (API + pgvector Postgres)
 - [x] **Dual CI** (offline SQLite suite + PostgreSQL/pgvector integration job)
@@ -410,6 +411,29 @@ be swapped for an LLM-backed implementation without touching the graph.
 
 ---
 
+## Optional real CRM integration
+
+The default project runs **fully locally with no secrets** — CRM reads/writes go
+to its own PostgreSQL/SQLite store. An optional **HubSpot adapter** demonstrates
+that the agent is *ready to integrate with a real external CRM API*, behind a
+pluggable adapter (`app/integrations/crm_adapter.py`): `local` (default),
+`mock_external`, or `hubspot`.
+
+- **Writeback is dry-run by default** (`HUBSPOT_DRY_RUN=true`) — the HubSpot
+  adapter validates and maps the change but sends **no** PATCH unless you
+  explicitly disable dry-run.
+- **Human approval is still required** before any writeback — the adapter changes
+  *where* writes go, not *whether* they're approved. The LLM has no path to write.
+- Real writes use a **strict field allowlist** (`dealstage`, `amount`,
+  `closedate`, `dealflow_ai_status`); anything else is rejected.
+- **CI uses the `local`/`mock_external` adapters only.** HubSpot tests run against
+  `httpx.MockTransport` — no network, no token. No secrets are committed.
+
+See [`docs/integrations.md`](docs/integrations.md) for env vars, an example
+`.env`, and the full safety model.
+
+---
+
 ## API reference & sample curl commands
 
 Base URL (local): `http://localhost:8000`
@@ -610,6 +634,7 @@ dealflow-ai-agent/
 - [`docs/portfolio_summary.md`](docs/portfolio_summary.md) — resume bullets, LinkedIn post, and role positioning.
 - [`docs/project_review.md`](docs/project_review.md) — self-review scorecard (what's strong / limited / improved / next).
 - [`docs/evaluation.md`](docs/evaluation.md) — evaluation approach and example results.
+- [`docs/integrations.md`](docs/integrations.md) — pluggable CRM adapters (local / mock_external / HubSpot), env vars, and the writeback safety model.
 - [`docs/productionization.md`](docs/productionization.md) — honest map of what would change for production.
 - [`docs/demo/`](docs/demo/) — copy-paste [demo commands](docs/demo/demo_commands.md), a [terminal walkthrough](docs/demo/terminal_demo.md), and sample JSON responses ([agent](docs/demo/sample_agent_response.json) · [trace](docs/demo/sample_trace_response.json) · [evaluation](docs/demo/sample_evaluation_summary.json)).
 

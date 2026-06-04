@@ -61,6 +61,17 @@ class Settings(BaseSettings):
     # CRM fields considered "important" -> changing them needs human approval.
     approval_required_fields: str = Field(default="stage,deal_value,close_date")
 
+    # --- CRM adapter (external integration is OFF by default) ---
+    # local         -> read/write the project's own PostgreSQL/SQLite (default)
+    # mock_external -> simulated external CRM (no network; for demos/tests)
+    # hubspot       -> real HubSpot CRM v3 API (opt-in; dry-run by default)
+    crm_adapter: str = Field(default="local")
+    hubspot_access_token: str | None = Field(default=None)
+    hubspot_base_url: str = Field(default="https://api.hubapi.com")
+    # Safety: real PATCH writeback is disabled unless this is explicitly false.
+    hubspot_dry_run: bool = Field(default=True)
+    hubspot_timeout_seconds: int = Field(default=10)
+
     @property
     def is_postgres(self) -> bool:
         return self.database_url.startswith("postgres")
