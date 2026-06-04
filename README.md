@@ -434,7 +434,9 @@ with a real external CRM API*, behind a pluggable adapter
   `httpx.MockTransport` — no network, no token. No secrets are committed.
 
 See [`docs/integrations.md`](docs/integrations.md) for env vars, an example
-`.env`, and the full safety model.
+`.env`, and the full safety model, and
+[`docs/demo/hubspot_dry_run_demo.md`](docs/demo/hubspot_dry_run_demo.md) for a
+local-only, dry-run verification walkthrough against your own sandbox HubSpot.
 
 ---
 
